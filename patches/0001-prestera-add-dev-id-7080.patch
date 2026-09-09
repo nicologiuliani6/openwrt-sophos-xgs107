@@ -1,0 +1,76 @@
+Subject: [PATCH] net: marvell: prestera: probe Marvell 11ab:7080 (Sophos XGS 107w)
+
+Not for upstream as-is: 0x7080 is undocumented silicon found in the Sophos
+XGS 107(w) appliance and has not yet been confirmed to speak the Prestera
+loader protocol. This patch only gets the driver to bind so the loader
+handshake (0xf00dfeed / 0xcafebabe) can be observed in dmesg.
+
+Two bring-up unknowns are exposed as module parameters rather than guessed
+at compile time, so they can be flipped on the target without a rebuild:
+
+  pp_bar2=-1|0|1   packet processor regs in a separate BAR4 (like AC3X /
+                   Aldrin2) or in the second half of BAR2 (like 98DX35xx)
+  fw_arm64=-1|0|1  which firmware image flavour to request
+
+-1 (the default) preserves the existing per-device-ID behaviour, so all
+currently supported devices are unaffected.
+
+--- a/drivers/net/ethernet/marvell/prestera/prestera_pci.c
+--- a/drivers/net/ethernet/marvell/prestera/prestera_pci.c
++++ b/drivers/net/ethernet/marvell/prestera/prestera_pci.c
+@@ -193,6 +193,26 @@
+ #define PRESTERA_DEV_ID_98DX3501	0x9826
+ #define PRESTERA_DEV_ID_98DX3510	0x9821
+ #define PRESTERA_DEV_ID_98DX3520	0x9822
++/* Marvell switch ASIC found in the Sophos XGS 107(w) appliance. Exact
++ * silicon variant is not published; the ID is not in Marvell's documented
++ * Prestera range, so both the BAR layout and the firmware image flavour
++ * are unverified. See the pp_bar2/fw_arm64 module parameters below.
++ */
++#define PRESTERA_DEV_ID_XGS107W		0x7080
++
++/* Bring-up overrides for devices whose layout is not yet known.
++ * -1 keeps the per-device-ID default, 0/1 force a choice without
++ * requiring a rebuild on the target.
++ */
++static int pp_bar2 = -1;
++module_param(pp_bar2, int, 0444);
++MODULE_PARM_DESC(pp_bar2,
++		 "packet processor regs location: -1 = per-device default, 0 = separate BAR4, 1 = second half of BAR2");
++
++static int fw_arm64 = -1;
++module_param(fw_arm64, int, 0444);
++MODULE_PARM_DESC(fw_arm64,
++		 "firmware image flavour: -1 = per-device default, 0 = mvsw_prestera_fw, 1 = mvsw_prestera_fw_arm64");
+ 
+ struct prestera_fw_evtq {
+ 	u8 __iomem *addr;
+@@ -702,6 +722,10 @@
+ 
+ static const char *prestera_fw_path_fmt_get(struct prestera_fw *fw)
+ {
++	if (fw_arm64 >= 0)
++		return fw_arm64 ? PRESTERA_FW_ARM64_PATH_FMT :
++				  PRESTERA_FW_PATH_FMT;
++
+ 	switch (fw->pci_dev->device) {
+ 	case PRESTERA_DEV_ID_98DX3500:
+ 	case PRESTERA_DEV_ID_98DX3501:
+@@ -802,6 +826,9 @@
+ 
+ static bool prestera_pci_pp_use_bar2(struct pci_dev *pdev)
+ {
++	if (pp_bar2 >= 0)
++		return pp_bar2 != 0;
++
+ 	switch (pdev->device) {
+ 	case PRESTERA_DEV_ID_98DX7312M:
+ 	case PRESTERA_DEV_ID_98DX3500:
+@@ -965,6 +992,7 @@
+ 	{ PCI_DEVICE(PCI_VENDOR_ID_MARVELL, PRESTERA_DEV_ID_98DX3501) },
+ 	{ PCI_DEVICE(PCI_VENDOR_ID_MARVELL, PRESTERA_DEV_ID_98DX3510) },
+ 	{ PCI_DEVICE(PCI_VENDOR_ID_MARVELL, PRESTERA_DEV_ID_98DX3520) },
++	{ PCI_DEVICE(PCI_VENDOR_ID_MARVELL, PRESTERA_DEV_ID_XGS107W) },
+ 	{ }
+ };
+ MODULE_DEVICE_TABLE(pci, prestera_pci_devices);

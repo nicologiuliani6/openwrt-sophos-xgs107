@@ -1,0 +1,16 @@
+# Out-of-tree kernel build artifacts
+driver/**/*.o
+driver/**/*.ko
+driver/**/*.mod
+driver/**/*.mod.c
+driver/**/.*.cmd
+driver/**/Module.symvers
+driver/**/modules.order
+driver/**/.tmp_versions/
+
+# Firmware blobs are redistributable but large; re-stage with scripts.
+firmware-refs/mrvl/
+
+# Hardware capture output
+logs/*/
+logs/*.txt
