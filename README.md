@@ -4,8 +4,78 @@ Reviving a Sophos XGS 107w desktop firewall appliance whose built-in 8-port
 Marvell switch ASIC has no working open source driver. Goal: get the switch
 ports functional under Linux/OpenWrt without Sophos's proprietary SFOS.
 
-Hardware received as a gift from a contact (NC1HM), likely the same "NC1"
-who diagnosed this exact problem on the OpenWrt forum in 2023.
+Hardware received as a gift from a community contact — the same person who
+diagnosed this exact problem on the OpenWrt forum in 2023.
+
+No usernames, handles, or real names appear anywhere in this repo. Sources
+are cited as links or as the community they came from.
+
+## Stato aggiornato
+
+**This supersedes parts of the plan below.** The central obstacle is not a
+missing host driver. It is that the switch never boots.
+
+### The switch is a split-brain machine
+
+The Marvell `[11ab:7080]` is not a passive PCIe ASIC driven by the host.
+It is a second computer inside the appliance:
+
+- its own **ARM CPU**
+- its own **RAM** (~2 GB)
+- its own **eMMC storage**
+- its own **Linux**, running Marvell's proprietary **CPSS agent** to
+  manage the switch fabric
+
+**Until that ARM side boots and CPSS is running, the switch does not
+forward a single packet — regardless of any driver loaded on the x86
+side.** This is why Debian, OPNsense and OpenWrt all see nothing: they are
+talking to half a machine.
+
+Confirmed by community work on this exact model (see
+[docs/prior-art.md](docs/prior-art.md)), which reached **L2 forwarding on
+all 8 ports** by booting the ARM side. Reported to apply to every XGS
+desktop model — 87, 107, 116, 126, 136. Older SG/XG units used Intel
+chipsets and need none of this.
+
+### Consequence for the work already staged here
+
+The mainline `prestera_pci.c` patch adding device ID `0x7080` **does not
+solve this**. It addresses host↔ASIC PCIe communication, which is not the
+missing piece. It may become useful once the ARM side is alive — see
+"Possibly useful in a later phase" below — but it is no longer the primary
+line of attack.
+
+### The four current workstreams
+
+1. **Prior art** — [docs/prior-art.md](docs/prior-art.md). The community
+   method, the `NPU COM` pinout, what worked, what is still unsolved (L3,
+   VLAN persistence), and the open Marvell CPSS alternative. No full
+   write-up has been published, so the recipe still has to be
+   reconstructed.
+2. **ARM serial bring-up** —
+   [docs/npu-com-serial-checklist.md](docs/npu-com-serial-checklist.md).
+   Voltage and GND verification before any adapter is connected, TX/RX
+   crossover, what to capture from the first boot. The pinout is a
+   hypothesis from one unit, not a fact about ours.
+3. **Sophos firmware** —
+   [docs/sophos-firmware.md](docs/sophos-firmware.md). Where the official
+   SFOS installer is obtained (publicly, no login), and what to extract
+   from it: ARM kernel, rootfs, CPSS agent. Extracted binaries stay out of
+   version control.
+4. **OpenWrt porting plan** —
+   [docs/openwrt-porting-plan.md](docs/openwrt-porting-plan.md). The final
+   goal, **explicitly not yet actionable**. Blocked until the ARM side is
+   confirmed working on our own hardware.
+
+### Revised order of work
+
+1. Open the case, locate `NPU COM`, photograph it.
+2. Verify voltage and GND with a multimeter. Serial console to the ARM
+   side, receive path only at first.
+3. **Dump the stock SPI flash and eMMC off-box before writing anything.**
+   A bricked ARM side with no known-good image ends this project.
+4. Get the ARM side booting with CPSS. Verify forwarding.
+5. Only then revisit the host-side `prestera` driver question.
 
 ## Hardware facts (confirmed)
 
@@ -21,11 +91,19 @@ who diagnosed this exact problem on the OpenWrt forum in 2023.
   the box
 - **Power**: dual redundant DC IN (DC IN 1 / DC IN 2)
 - **Console**: RJ45, Cisco-style rollover pinout, **38400 baud, 8N1**
-  (confirmed by NC1HM directly)
+  (confirmed directly by the
+  contact who supplied the unit)
 - **Rack mount**: not included; third-party kits exist (Rackmount.IT
   RM-SR-T11, ~1.3U) if ever needed — not required for bring-up work
 
-## The core problem
+## The core problem (original framing — partly wrong, see "Stato aggiornato")
+
+> **Correction.** This section assumed the host loads firmware into the
+> ASIC over PCIe and that this is sufficient. It is not: the ARM side is a
+> full independent computer that boots its own Linux from its own eMMC and
+> runs the CPSS agent. Host-side firmware loading does not substitute for
+> that. The Prestera protocol detail below remains accurate and useful for
+> the later phase.
 
 The Marvell chip at `[11ab:7080]` is a **Prestera-family switch ASIC**,
 not a simple NIC. It has its own embedded ARM core and requires the host
@@ -64,10 +142,12 @@ list, and if so, get it recognized and talking to the public firmware."
 
 ## What happened in 2023 (prior art)
 
-OpenWrt forum thread, user "pancio" tried this exact model, got nothing
-(no network interfaces at all — worse than a dumb switch fallback). User
-"NC1" explained why: no driver existed publicly at the time for this
-switch family with the level of detail needed. Netgate had written a
+An OpenWrt forum thread from a user who tried this exact model got nothing
+(no network interfaces at all — worse than a dumb switch fallback). Another
+participant explained why: no driver existed publicly at the time for this
+switch family with the level of detail needed, and the switch "operates as
+a router unto itself (it has its own ARM processor)" — which turned out to
+be the whole story, see "Stato aggiornato" above. Netgate had written a
 similar driver but kept it proprietary inside pfSense Plus.
 
 Since 2023, the mainline `prestera` driver + public firmware situation
@@ -76,7 +156,7 @@ end. That's the bet this project is making.
 
 Source: https://forum.openwrt.org/t/sophos-xgs107-and-no-network-interfaces-unknown-network-controller/168989
 
-## First steps once the hardware arrives
+## Original bring-up plan (superseded — kept for the host-side steps)
 
 1. **Console access**: USB-A → RJ45 (CH340-based) cable, 38400 baud 8N1,
    confirm you're seeing the x86 BIOS/UEFI console.
@@ -101,10 +181,16 @@ Source: https://forum.openwrt.org/t/sophos-xgs107-and-no-network-interfaces-unkn
    Cavium-style methodology (systematic probing, cross-referencing
    register behavior) becomes relevant again.
 
-## Ready before the hardware arrives
+## Possibly useful in a later phase — not the primary solution
 
-Everything for step 4 above is staged and verified on the dev box — nothing
-left to figure out at the bench:
+> Everything in this section was staged before the split-brain architecture
+> was understood. It is kept because it may matter **after** the ARM side is
+> alive — if the host can then speak the Prestera wire protocol over PCIe,
+> ports may appear as switchdev netdevs on the x86 side. It is **not** the
+> path to making the ports work, and testing it on a switch whose ARM side
+> has never booted proves nothing either way.
+
+Staged and verified on the dev box:
 
 - `driver/prestera-v6.14/` — mainline v6.14 prestera source, patched to bind
   `11ab:7080`, builds clean against 6.14 headers.
@@ -142,14 +228,13 @@ back and the wire protocol matches.
 
 ## Open questions
 
-- [ ] Does NC1HM (possibly = forum user "NC1") have any additional
-      findings since 2023, or leaked/extracted firmware for this exact
-      chip variant?
-- [ ] Is there a hidden debug UART near the Marvell chip itself (separate
-      from the x86 BIOS console), for visibility into the switch's ARM
-      core specifically?
-- [ ] Does the SFP "F1" port sit behind the same switch, or is it wired
-      independently?
+- [ ] Does the contact who supplied the unit have any additional findings
+      since 2023, or extracted firmware for this exact chip variant?
+- [x] **Answered**: yes — the `NPU COM` header, separate from the x86 RJ45
+      console. See `docs/npu-com-serial-checklist.md`.
+- [x] **Answered**: the SFP "F1" port sits behind the **same switch**
+      (port 0 or 9 in the init sequence). There is no independent SFP
+      path, so no partial win by using SFP alone.
 
 ## Repo / write-up plans
 
