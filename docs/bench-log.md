@@ -236,6 +236,41 @@ keep the NPU in u-boot or on our own kernel, or stop that daemon first.
   (8-bit, 1.8 V); `reserved-memory` hides 432 MiB at `0x40000000` for the
   Sophos fast path.
 
+### 10. First mainline boot attempt (kexec from stock), 2026-09-18 ~23:10
+
+Built on the PC:
+- Linux 6.18.52: arm64 `defconfig` plus built-in `MVPP2`, CP110 comphy,
+  DSA + `mv88e6xxx` + DSA/EDSA taggers, `sdhci-xenon`, SPI NOR, `mv64xxx`
+  I2C, PCA953x, SFP, bridge and `kexec`.
+- `dts/cn9130-sophos-xgs107w.dts`.
+- A busybox initramfs: its rcS prints DSA/mvpp2 dmesg lines, bridges
+  `lan1..8` into `br0`, runs DHCP on `br0` and starts `telnetd`.
+- Static aarch64 `kexec` (kexec-tools 2.0.31).
+
+Loaded onto the running stock NPU:
+- Artifacts copied into the NPU's tmpfs `/tmp`, sha256 verified on the
+  NPU. **Nothing was written to eMMC, SPI or the u-boot env.**
+- `kexec -l` succeeded (4 segments, kernel at phys 0x0). Then
+  `kexec -e`.
+- The x86 captured `/dev/ttyS2` (NPU console) into `/tmp/npu.log` on SFOS.
+
+Result, observed only passively from the PC, because further console
+commands to the XGS were blocked by the agent's permission policy:
+- SFOS's Port2 (192.168.88.157) stopped answering right after, so the
+  stock NPU firmware is gone and `kexec -e` did run.
+- No new host with telnet (port 23) appeared on the LAN. So either the
+  new kernel did not boot, or it booted but `eth0`/DSA/DHCP did not come
+  up.
+- The NPU console output is in `/tmp/npu.log` **on the x86 SFOS**, not
+  yet read.
+
+State left: stock NPU firmware not running, SFOS on the x86 still up.
+**Recovery: power-cycle the appliance.** Nothing persistent changed, so
+it boots fully stock.
+
+Next: read `/tmp/npu.log` on SFOS (before power-cycling, it is on
+tmpfs). That tells whether the kernel booted and what DSA/mvpp2 said.
+
 ---
 
 ## Open questions after session 1
