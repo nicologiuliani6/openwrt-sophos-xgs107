@@ -271,6 +271,68 @@ it boots fully stock.
 Next: read `/tmp/npu.log` on SFOS (before power-cycling, it is on
 tmpfs). That tells whether the kernel booted and what DSA/mvpp2 said.
 
+## 2026-09-19 — session 2 (autonomous, overnight)
+
+### 11. First boot: kernel up, initramfs broken, ports 5-8 rejected
+
+Reading SFOS `/tmp/npu.log` after the first `kexec -e`:
+
+- **Linux 6.18.52 booted on the CN9130** with our DT:
+  `Machine model: Sophos XGS 107w (CN9130 NPU)`, eMMC detected.
+- `mv88e6085 …: switch 0x1930 detected: Marvell 88E6193X`. The CPU port
+  came up in `inband/10gbase-r`, and lan1-4 attached their internal PHYs.
+- lan5-8 failed: `validation of gmii … failed: -EINVAL`. Their C_MODE
+  field was invalid because stock NetAgent had left them powered down, and
+  kexec does not reset the switch.
+- SPI NOR: `unrecognized JEDEC id bytes: ff ff ff`. The flash sits on
+  mainline `cp0_spi0` (0x700600), not `spi1`: the stock DT's
+  "cell-index 1" was misleading.
+- initramfs: `can't run '/etc/init.d/rcS'`, because `/bin/sh` did not
+  exist yet (the busybox links were created by rcS itself), and so
+  `/dev/ttyS0` was missing too.
+
+### 12. Getting back to stock without touching the box
+
+- SysRq-b sent from SFOS over x86 `ttyS2` (python `tcsendbreak` then
+  `b`) reboots the NPU into stock.
+- **SFOS on the x86 kernel-panics** when the NPU drops off PCIe (BUG in
+  `kfree` from `mv_giu_drv` `agnic_txdone_tasklet_callback`). It reboots
+  by itself through kdump and comes back normally about 4 minutes later.
+  SFOS's NPU validation passes and the appliance is fully stock again.
+- Automated in `scripts/61-npu-recover.sh`: SysRq, wait for the x86 login
+  prompt, log in, open the advanced shell. The test cycle itself is in
+  `scripts/60-npu-kexec.cmds` and `scripts/60-npu-kexec.md`.
+
+### 13. Switch reset
+
+- The switch reset line is **CP GPIO2 pin 17** (stock u-boot
+  `gpio clear C17 … gpio set C17`; u-boot bank names A = AP, B = CP gpio1,
+  C = CP gpio2).
+- As `reset-gpios` in the DT, the driver times out after reset
+  (`Timeout while waiting for switch`, -110): mv88e6xxx waits 10 ms plus a
+  50 ms poll, while the 6193X needs much longer (stock waits 2 s).
+- Solution without kernel patches: the stock Linux pulses the line (sysfs
+  `gpio81` = gpiochip64 + 17, low 1 s, high, wait 2 s) right before
+  `kexec -e`. On the final u-boot path, `sw_init_p0` does the same job.
+
+### 14. Result: all 8 ports up under mainline Linux
+
+After the reset-then-kexec cycle:
+- `lan1`…`lan8` and `sfp` DSA ports, all bridged into `br0`.
+- `lan2` (cable to the home router) `Link is Up - 1Gbps/Full`.
+- `eth0` (mvpp2 ↔ switch) at **10000 Mb/s**.
+- `br0` got a DHCP lease on the home LAN; busybox telnetd answers on it
+  (`scripts/70-npu-telnet.py`). Management traffic therefore runs the full
+  data path front port → 88E6193X → 10G → mvpp2 → CPU.
+- SPI NOR on `spi0` read back **byte-identical to the Phase 1 dump**
+  (`mtd0` `fe13a2a3…`, `mtd1` `3325e15d…`), kept read-only.
+- 4 CPUs and ~1.5 GB RAM, of which 432 MiB is still reserved for stock DMA
+  safety under kexec.
+- SFP cage GPIOs are claimed by the `sfp` driver. **Not tested: no SFP
+  module available.**
+- Not yet tested: forwarding between two front ports and routing
+  throughput. Both need a second device on another port.
+
 ---
 
 ## Open questions after session 1

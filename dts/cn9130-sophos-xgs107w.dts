@@ -28,7 +28,7 @@
 		ethernet0 = &cp0_eth0;
 		i2c0 = &cp0_i2c0;
 		i2c1 = &cp0_i2c1;
-		spi1 = &cp0_spi1;
+		spi0 = &cp0_spi0;
 	};
 
 	memory@0 {
@@ -121,8 +121,12 @@
 	status = "okay";
 };
 
-/* 4 MB SPI NOR: stock U-Boot + env. Read-only on purpose. */
-&cp0_spi1 {
+/*
+ * 4 MB SPI NOR: stock U-Boot + env. Read-only on purpose.
+ * The stock DT calls this controller (0x700600) "cell-index 1", but in
+ * mainline it is cp0_spi0.
+ */
+&cp0_spi0 {
 	status = "okay";
 
 	flash@0 {
@@ -170,6 +174,16 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 		reg = <2>;
+		/*
+		 * The switch reset line is CP GPIO2 pin 17 (stock U-Boot
+		 * "sw_init_p0: gpio clear C17 … gpio set C17"; U-Boot names the
+		 * banks A = AP, B = CP gpio1, C = CP gpio2). It is deliberately
+		 * not given to the driver as reset-gpios: after reset the 6193X
+		 * needs far longer than mv88e6xxx's 10 ms + 50 ms poll (stock
+		 * waits 2 s), and probing times out with -ETIMEDOUT. The reset
+		 * is done by whatever starts this kernel (bootloader or kexec
+		 * wrapper) instead.
+		 */
 
 		ports {
 			#address-cells = <1>;
