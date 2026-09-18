@@ -1,5 +1,20 @@
 # Prior art — community bring-up of the XGS switch (split-brain)
 
+> **Update 2026-09-18, from our own unit:** the "Marvell 7080 switch chip"
+> is a **CN9130 SoC** (PCIe endpoint) plus an **88E6193X** switch. See
+> [hardware-architecture.md](hardware-architecture.md). Two readings of the
+> post below change:
+> - The *"Sophos USB-SPI tool that's on the board"* is SFOS's own
+>   `xgs-npu-uboot-update.sh`. It runs on the x86 and writes the NPU's
+>   `/dev/mtd0` through `xgs-ssh.sh`, so it is not a separate
+>   hardware tool.
+> - "CPSS agent" in the post very likely means Sophos's NPU switch agent
+>   (NetAgent, `xgs-mdio`), not Marvell's Prestera CPSS: an 88E6193X is not
+>   a Prestera device.
+>
+> The method itself still stands: boot the CN9130 side and the ports
+> forward.
+
 **Source**: r/opnsense thread, "finally getting 8 ports working on sophos
 xgs 107 under linux" (posted ~May 2026, active through Sept 2026).
 <https://www.reddit.com/r/opnsense/comments/1tolc32/finally_getting_8_ports_working_on_sophos_xgs_107/>
@@ -73,8 +88,9 @@ prompt is `marvell#`.
 
 ## 3. `NPU COM` pinout (community-reported)
 
-The header is **4 positions, pin 1 unpopulated/empty** — so three usable
-pins, consistent with a visual "3-pin" read.
+The header is **4 positions**; the reference marks pin 1 "empty". On our
+unit all 4 pins are physically fitted, so "empty" means *not used* — pin 1
+could be VCC. See the checklist for the photo and measurement notes.
 
 ```
 pin 1: (empty)

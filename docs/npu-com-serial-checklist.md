@@ -1,5 +1,11 @@
 # `NPU COM` header — first-connection checklist (ARM/switch side)
 
+> **Update 2026-09-18:** the NPU console (CN9130 `ttyS0`, 115200 8N1) is
+> also wired to the x86 as **`/dev/ttyS2`**. From any Linux on the x86,
+> `/dev/ttyS2` gives the NPU u-boot and kernel console without touching this
+> header. The header read nothing on the bench, still unexplained (see
+> [bench-log.md](bench-log.md) §3). This checklist is kept as a fallback.
+
 The header silkscreened **`NPU COM`** is the UART of the switch's own ARM
 CPU. It is **not** the x86 console — the x86 console is the RJ45 rollover
 port at 38400 8N1, and it shows nothing of the switch's boot.
@@ -24,8 +30,16 @@ pin 3: RXD   ->  FTDI TXD      <- board RX, adapter TX
 pin 4: TXD   ->  FTDI RXD      <- board TX, adapter RX
 ```
 
-Written board-side first, **already crossed**. A 4-position header with
-pin 1 unpopulated reads visually as "3 pins" — that matches.
+Written board-side first, **already crossed**.
+
+**Observed on our unit (2026-09-18, photo `logs/npu-com-header.jpg`):**
+the header has **all 4 pins physically fitted**. Silkscreen: `4` on the
+left end (next to `J10`), `1` on the right end. So the reference's "pin 1:
+empty" means *not used*, not *missing*. **Pin 1 may be VCC** — measure it
+in Phase 2 and never connect anything to it. Pitch looks like standard
+2.54mm (confirm by fitting a dupont). `J10`, the unpopulated 2-hole
+footprint right next to the header, has unknown function — do not short
+it.
 
 Adapter used successfully: **plain FTDI USB-to-TTL**. Not an SFP
 programmer, no special hardware.
@@ -75,7 +89,9 @@ Wait ~30s for capacitors to drain.
 Board powered, **no adapter attached**. DC volts, black probe on the GND
 pin from step 2.
 
-4. **Measure the logic level** on pins 3 and 4.
+4. **Measure pin 1 first.** A steady 3.3V/5V/1.8V here that does not
+   change during boot means **VCC**: note it and leave pin 1 unconnected
+   for good. Then **measure the logic level** on pins 3 and 4.
    - **~3.3V idle** → 3.3V UART. Expected. Proceed.
    - **~5V** → level shifter or 5V-tolerant adapter required.
    - **~1.8V** → a 3.3V adapter would overdrive this pin and can damage

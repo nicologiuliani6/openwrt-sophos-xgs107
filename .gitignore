@@ -14,3 +14,10 @@ firmware-refs/mrvl/
 # Hardware capture output
 logs/*/
 logs/*.txt
+
+# Device dumps (proprietary Sophos/Marvell binaries) — never commit
+dumps/
+
+# Raw console captures stay local: they contain the unit's serial number,
+# MACs and network config
+logs/*.log

@@ -1,7 +1,7 @@
-# Sophos XGS 107w — Marvell Prestera reverse engineering
+# Sophos XGS 107w — CN9130 / 88E6193X bring-up (Linux, OpenWrt)
 
-Reviving a Sophos XGS 107w desktop firewall appliance whose built-in 8-port
-Marvell switch ASIC has no working open source driver. Goal: get the switch
+Reviving a Sophos XGS 107w desktop firewall appliance whose 8 switch ports
+are unusable without Sophos's proprietary SFOS. Goal: get the switch
 ports functional under Linux/OpenWrt without Sophos's proprietary SFOS.
 
 Hardware received as a gift from a community contact — the same person who
@@ -12,80 +12,79 @@ are cited as links or as the community they came from.
 
 ## Stato aggiornato
 
-**This supersedes parts of the plan below.** The central obstacle is not a
-missing host driver. It is that the switch never boots.
+**This supersedes the plan below.** Updated 2026-09-18 after reading the
+running unit from inside SFOS. Full detail:
+[docs/hardware-architecture.md](docs/hardware-architecture.md).
 
-### The switch is a split-brain machine
+### What `[11ab:7080]` actually is
 
-The Marvell `[11ab:7080]` is not a passive PCIe ASIC driven by the host.
-It is a second computer inside the appliance:
+The split-brain picture holds, but the components are different from what
+was assumed. It is **not a Prestera switch**:
 
-- its own **ARM CPU**
-- its own **RAM** (~2 GB)
-- its own **eMMC storage**
-- its own **Linux**, running Marvell's proprietary **CPSS agent** to
-  manage the switch fabric
+- **NPU = Marvell CN9130** SoC (4× Cortex-A72, ~1.5 GB RAM, 7.3 GB eMMC,
+  4 MB SPI u-boot) attached to the x86 as a **PCIe endpoint**. It runs its
+  own Linux 4.14 (Marvell SDK) from eMMC.
+- **Switch = Marvell 88E6193X** on the CN9130's MDIO bus. Ports 1-8 are
+  its internal PHYs, the SFP "F1" is its port 9, and its port 0 is a 10G
+  link to the CN9130's `mvpp2` Ethernet.
+- The x86 reaches the ports only through Sophos-proprietary host drivers
+  (`mv_armada_drv`, `mv_giu_drv`, `mv_pcinet_drv`, …, kernel 4.14.277
+  only). That is why stock Debian, OPNsense and OpenWrt on the x86 see no
+  ports.
+- The NPU console is **x86 `/dev/ttyS2` @ 115200**. SFOS has a root shell
+  on the NPU via `xgs-ssh.sh`.
 
-**Until that ARM side boots and CPSS is running, the switch does not
-forward a single packet — regardless of any driver loaded on the x86
-side.** This is why Debian, OPNsense and OpenWrt all see nothing: they are
-talking to half a machine.
+### Direction
 
-Confirmed by community work on this exact model (see
-[docs/prior-art.md](docs/prior-art.md)), which reached **L2 forwarding on
-all 8 ports** by booting the ARM side. Reported to apply to every XGS
-desktop model — 87, 107, 116, 126, 136. Older SG/XG units used Intel
-chipsets and need none of this.
+Target: **mainline Linux, then OpenWrt, running on the CN9130 itself**.
+- The CN9130, `mvpp2`, `sdhci-xenon` and the `mv88e6xxx` DSA driver
+  (88E6193X) are all in mainline.
+- L2 switching stays in hardware, and routing runs on 4 A72 cores behind a
+  10G uplink.
+- No proprietary blobs, so the image is redistributable.
 
-### Consequence for the work already staged here
+The x86 (and its Wi-Fi) is a later, optional phase.
 
-The mainline `prestera_pci.c` patch adding device ID `0x7080` **does not
-solve this**. It addresses host↔ASIC PCIe communication, which is not the
-missing piece. It may become useful once the ARM side is alive — see
-"Possibly useful in a later phase" below — but it is no longer the primary
-line of attack.
+Order of work (plan approved 2026-09-18):
 
-### The four current workstreams
+0. Document everything — done: [docs/bench-log.md](docs/bench-log.md),
+   [docs/hardware-architecture.md](docs/hardware-architecture.md).
+1. Full verified backup of NPU SPI + eMMC and of the SFOS NPU tooling,
+   before any write.
+2. Mainline Linux on the CN9130, booted manually from a spare eMMC slot,
+   with stock left intact on p3.
+3. OpenWrt (`mvebu/cortexa72`) — [docs/openwrt-porting-plan.md](docs/openwrt-porting-plan.md).
 
-1. **Prior art** — [docs/prior-art.md](docs/prior-art.md). The community
-   method, the `NPU COM` pinout, what worked, what is still unsolved (L3,
-   VLAN persistence), and the open Marvell CPSS alternative. No full
-   write-up has been published, so the recipe still has to be
-   reconstructed.
-2. **ARM serial bring-up** —
-   [docs/npu-com-serial-checklist.md](docs/npu-com-serial-checklist.md).
-   Voltage and GND verification before any adapter is connected, TX/RX
-   crossover, what to capture from the first boot. The pinout is a
-   hypothesis from one unit, not a fact about ours.
-3. **Sophos firmware** —
-   [docs/sophos-firmware.md](docs/sophos-firmware.md). Where the official
-   SFOS installer is obtained (publicly, no login), and what to extract
-   from it: ARM kernel, rootfs, CPSS agent. Extracted binaries stay out of
-   version control.
-4. **OpenWrt porting plan** —
-   [docs/openwrt-porting-plan.md](docs/openwrt-porting-plan.md). The final
-   goal, **explicitly not yet actionable**. Blocked until the ARM side is
-   confirmed working on our own hardware.
+### Obsolete work
 
-### Revised order of work
+`driver/`, `patches/0001-prestera-add-dev-id-7080.patch`, `firmware-refs/`
+and `scripts/05-`, `10-`, `20-` target the mainline `prestera` driver, which
+does not apply to this hardware. They are kept for the record only. The
+same goes for the CPSS assumptions in
+[docs/prior-art.md](docs/prior-art.md), whose method (boot the ARM side)
+still holds.
 
-1. Open the case, locate `NPU COM`, photograph it.
-2. Verify voltage and GND with a multimeter. Serial console to the ARM
-   side, receive path only at first.
-3. **Dump the stock SPI flash and eMMC off-box before writing anything.**
-   A bricked ARM side with no known-good image ends this project.
-4. Get the ARM side booting with CPSS. Verify forwarding.
-5. Only then revisit the host-side `prestera` driver question.
+### Other docs
+
+- [docs/prior-art.md](docs/prior-art.md) — community r/opnsense work.
+- [docs/npu-com-serial-checklist.md](docs/npu-com-serial-checklist.md) —
+  on-board header; superseded by x86 `ttyS2`.
+- [docs/sophos-firmware.md](docs/sophos-firmware.md) — official SFOS
+  images, for restoring stock.
 
 ## Hardware facts (confirmed)
 
-- **Platform**: x86, AMD-based (per the 2023 OpenWrt thread `lspci` dump —
-  needs reconfirming on this exact unit once it arrives)
-- **Switch chip**: Marvell Technology Group, PCI ID `[11ab:7080]`
+- **Platform**: x86 AMD Embedded R-Series RX-216TD, 4 GB RAM
+- **NPU**: Marvell CN9130 as PCIe endpoint, PCI ID `[11ab:7080]` (+ two
+  `[11ab:7081]` functions)
+- **Switch chip**: Marvell 88E6193X behind the CN9130
+- **Mainboard**: silkscreen `XGS 87(W) 107(W) 1.40` — one PCB shared by
+  XGS 87 and 107, board rev 1.40 (observed on our unit, 2026-09-18)
 - **Ports**: 8x GbE copper (1/LAN, 2/WAN, 3/DMZ, 4, 5, 6, 7, 8) + 1x SFP
   (labeled "F1")
-- **Wi-Fi**: integrated ("w" model), 2x SMA antenna connectors — chipset
-  not yet identified, may work out of the box independent of the switch
+- **Wi-Fi**: integrated ("w" model), 2x SMA antenna connectors. Module is
+  an M.2/mini-PCIe card under a black heatsink, U.FL connectors `CH0`/`CH1`
+  wired, `CH2` unused — chipset not yet identified (read via `lspci`), may work out of the box independent of the switch
   problem
 - **USB**: USB 3.0 port, standard xHCI, should work with any Linux out of
   the box
@@ -93,6 +92,11 @@ line of attack.
 - **Console**: RJ45, Cisco-style rollover pinout, **38400 baud, 8N1**
   (confirmed directly by the
   contact who supplied the unit)
+- **Micro-USB console**: second x86 console via on-board Prolific PL2303
+  (`067b:23a3`, `/dev/ttyUSB0`), 38400 8N1. Takes priority over the RJ45
+  console when both are connected. x86 only, not the switch side.
+- **Installed firmware**: SFOS 19.5.4 MR-4 (Build 718); boot runs
+  "Checking for NPU uboot mismatch" — SFOS manages the switch-side u-boot
 - **Rack mount**: not included; third-party kits exist (Rackmount.IT
   RM-SR-T11, ~1.3U) if ever needed — not required for bring-up work
 
@@ -181,14 +185,11 @@ Source: https://forum.openwrt.org/t/sophos-xgs107-and-no-network-interfaces-unkn
    Cavium-style methodology (systematic probing, cross-referencing
    register behavior) becomes relevant again.
 
-## Possibly useful in a later phase — not the primary solution
+## Obsolete: Prestera driver staging (kept for the record)
 
-> Everything in this section was staged before the split-brain architecture
-> was understood. It is kept because it may matter **after** the ARM side is
-> alive — if the host can then speak the Prestera wire protocol over PCIe,
-> ports may appear as switchdev netdevs on the x86 side. It is **not** the
-> path to making the ports work, and testing it on a switch whose ARM side
-> has never booted proves nothing either way.
+> Staged before the hardware was identified. `[11ab:7080]` turned out to be
+> a CN9130 in PCIe endpoint mode, not a Prestera, so the `prestera` driver
+> cannot bind to it meaningfully. Nothing here is on the current path.
 
 Staged and verified on the dev box:
 
