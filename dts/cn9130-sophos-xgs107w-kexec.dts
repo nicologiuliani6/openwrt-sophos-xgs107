@@ -1,0 +1,23 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Variant of cn9130-sophos-xgs107w.dts for starting the kernel with kexec
+ * from the stock SFOS NPU Linux (bench testing only). The stock firmware's
+ * packet engines may still DMA into its PCIe-console and fast-path buffers,
+ * so those stay reserved. Not needed when booting from U-Boot.
+ */
+
+#include "cn9130-sophos-xgs107w.dts"
+
+/ {
+	reserved-memory {
+		stock-pci-console@3f000000 {
+			reg = <0x0 0x3f000000 0x0 0x1000000>;
+			no-map;
+		};
+
+		stock-usfp@40000000 {
+			reg = <0x0 0x40000000 0x0 0x1b000000>;
+			no-map;
+		};
+	};
+};

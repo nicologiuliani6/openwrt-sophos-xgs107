@@ -42,22 +42,6 @@
 			reg = <0x0 0x4400000 0x0 0x1000000>;
 			no-map;
 		};
-
-		/*
-		 * Buffers of the stock SFOS NPU firmware (PCIe console and the
-		 * userspace fast path). Only needed when this kernel is started
-		 * with kexec from the stock NPU Linux, whose packet engines may
-		 * still be DMAing into them. Drop once booted from U-Boot.
-		 */
-		stock-pci-console@3f000000 {
-			reg = <0x0 0x3f000000 0x0 0x1000000>;
-			no-map;
-		};
-
-		stock-usfp@40000000 {
-			reg = <0x0 0x40000000 0x0 0x1b000000>;
-			no-map;
-		};
 	};
 
 	/* Front-panel SFP "F1", wired to 88E6193X port 9 */
@@ -199,42 +183,42 @@
 
 			port@1 {
 				reg = <1>;
-				label = "lan1";
+				label = "p1";
 			};
 
 			port@2 {
 				reg = <2>;
-				label = "lan2";
+				label = "p2";
 			};
 
 			port@3 {
 				reg = <3>;
-				label = "lan3";
+				label = "p3";
 			};
 
 			port@4 {
 				reg = <4>;
-				label = "lan4";
+				label = "p4";
 			};
 
 			port@5 {
 				reg = <5>;
-				label = "lan5";
+				label = "p5";
 			};
 
 			port@6 {
 				reg = <6>;
-				label = "lan6";
+				label = "p6";
 			};
 
 			port@7 {
 				reg = <7>;
-				label = "lan7";
+				label = "p7";
 			};
 
 			port@8 {
 				reg = <8>;
-				label = "lan8";
+				label = "p8";
 			};
 
 			port@9 {
