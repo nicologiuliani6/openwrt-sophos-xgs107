@@ -1,0 +1,387 @@
+diff --git a/package/boot/uboot-tools/uboot-envtools/files/mvebu b/package/boot/uboot-tools/uboot-envtools/files/mvebu
+index 018177a..0ef42d6 100644
+--- a/package/boot/uboot-tools/uboot-envtools/files/mvebu
++++ b/package/boot/uboot-tools/uboot-envtools/files/mvebu
+@@ -51,6 +51,9 @@ globalscale,mochabin)
+ 	fi
+ 	;;
+ marvell,armada8040-mcbin-doubleshot|\
++sophos,xgs107w-npu)
++	ubootenv_add_uci_config "/dev/mtd1" "0x0" "0x10000" "0x1000" "16"
++	;;
+ marvell,armada8040-mcbin-singleshot)
+ 	ubootenv_add_uci_config "/dev/mtd0" "0x3f0000" "0x10000" "0x10000" "1"
+ 	;;
+diff --git a/target/linux/mvebu/cortexa72/base-files/etc/board.d/02_network b/target/linux/mvebu/cortexa72/base-files/etc/board.d/02_network
+index 9d0f6d5..11b8f3d 100644
+--- a/target/linux/mvebu/cortexa72/base-files/etc/board.d/02_network
++++ b/target/linux/mvebu/cortexa72/base-files/etc/board.d/02_network
+@@ -4,6 +4,7 @@
+ #
+ 
+ . /lib/functions/uci-defaults.sh
++. /lib/functions/system.sh
+ 
+ board_config_update
+ 
+@@ -42,6 +43,14 @@ mikrotik,rb5009ug|\
+ mikrotik,rb5009upr)
+ 	ucidef_set_interfaces_lan_wan "p2 p3 p4 p5 p6 p7 p8 sfp" "p1"
+ 	;;
++sophos,xgs107w-npu)
++	ucidef_set_interfaces_lan_wan "p1 p3 p4 p5 p6 p7 p8 sfp" "p2"
++	# U-Boot "ethaddr" is label MAC + 9 (the NPU backplane port)
++	label_mac=$(macaddr_add "$(mtd_get_mac_ascii u-boot-env ethaddr)" -9)
++	ucidef_set_interface_macaddr "lan" "$label_mac"
++	ucidef_set_interface_macaddr "wan" "$(macaddr_add "$label_mac" 1)"
++	ucidef_set_label_macaddr "$label_mac"
++	;;
+ solidrun,clearfog-pro)
+ 	ucidef_set_interfaces_lan_wan "lan1 lan2 lan3 lan4 lan5 lan6 eth0 eth1" "eth2"
+ 	;;
+diff --git a/target/linux/mvebu/files/arch/arm64/boot/dts/marvell/cn9130-sophos-xgs107w.dts b/target/linux/mvebu/files/arch/arm64/boot/dts/marvell/cn9130-sophos-xgs107w.dts
+new file mode 100644
+index 0000000..bc327ec
+--- /dev/null
++++ b/target/linux/mvebu/files/arch/arm64/boot/dts/marvell/cn9130-sophos-xgs107w.dts
+@@ -0,0 +1,233 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Sophos XGS 87(w) / 107(w) — NPU complex: Marvell CN9130 + 88E6193X.
++ *
++ * Derived from the stock "Marvell CN9130 Senao XGS board" device tree
++ * (cn9130-senao-xgs.dtb, SFOS 19.5.4) and SFOS's xgs-platform port map.
++ * See docs/hardware-architecture.md.
++ *
++ * The x86 host on the same board is not described here: the CN9130 is a
++ * PCIe endpoint towards it, and endpoint mode is not used by this DT.
++ */
++
++/dts-v1/;
++
++#include "cn9130.dtsi"
++#include <dt-bindings/gpio/gpio.h>
++
++/ {
++	model = "Sophos XGS 107w (CN9130 NPU)";
++	compatible = "sophos,xgs107w-npu", "marvell,cn9130",
++		     "marvell,armada-ap807-quad", "marvell,armada-ap807";
++
++	chosen {
++		stdout-path = "serial0:115200n8";
++	};
++
++	aliases {
++		ethernet0 = &cp0_eth0;
++		i2c0 = &cp0_i2c0;
++		i2c1 = &cp0_i2c1;
++		spi0 = &cp0_spi0;
++	};
++
++	memory@0 {
++		device_type = "memory";
++		reg = <0x0 0x0 0x0 0x80000000>;
++	};
++
++	reserved-memory {
++		/* OP-TEE, as reserved by the stock firmware (TF-A 10.22.06) */
++		tee@4400000 {
++			reg = <0x0 0x4400000 0x0 0x1000000>;
++			no-map;
++		};
++	};
++
++	/* Front-panel SFP "F1", wired to 88E6193X port 9 */
++	sfp: sfp {
++		compatible = "sff,sfp";
++		i2c-bus = <&cp0_i2c1>;
++		los-gpios = <&cp0_gpio1 1 GPIO_ACTIVE_HIGH>;
++		tx-fault-gpios = <&cp0_gpio1 2 GPIO_ACTIVE_HIGH>;
++		mod-def0-gpios = <&cp0_gpio1 3 GPIO_ACTIVE_LOW>;
++		tx-disable-gpios = <&cp0_gpio1 7 GPIO_ACTIVE_HIGH>;
++		maximum-power-milliwatt = <2000>;
++	};
++};
++
++&uart0 {
++	status = "okay";
++};
++
++/* 8 GB eMMC on the AP */
++&ap_sdhci0 {
++	bus-width = <8>;
++	non-removable;
++	mmc-ddr-1_8v;
++	status = "okay";
++};
++
++/*
++ * MPP muxing is left as set up by the stock U-Boot: no pin groups are
++ * claimed here, the controller only exists for the GPIO banks.
++ */
++&cp0_syscon0 {
++	cp0_pinctrl: pinctrl {
++		compatible = "marvell,cp115-standalone-pinctrl";
++	};
++};
++
++&cp0_gpio1 {
++	status = "okay";
++};
++
++&cp0_gpio2 {
++	status = "okay";
++};
++
++&cp0_i2c0 {
++	clock-frequency = <100000>;
++	status = "okay";
++
++	/* Port speed LEDs (xgs-platform "gpio:3:*") */
++	led_gpio: gpio@20 {
++		compatible = "nxp,pca9555";
++		reg = <0x20>;
++		gpio-controller;
++		#gpio-cells = <2>;
++	};
++};
++
++&cp0_i2c1 {
++	/* SFP EEPROM (0x50/0x51) */
++	clock-frequency = <100000>;
++	status = "okay";
++};
++
++/*
++ * 4 MB SPI NOR: stock U-Boot + env. Read-only on purpose.
++ * The stock DT calls this controller (0x700600) "cell-index 1", but in
++ * mainline it is cp0_spi0.
++ */
++&cp0_spi0 {
++	status = "okay";
++
++	flash@0 {
++		compatible = "jedec,spi-nor";
++		reg = <0>;
++		spi-max-frequency = <40000000>;
++
++		partitions {
++			compatible = "fixed-partitions";
++			#address-cells = <1>;
++			#size-cells = <1>;
++
++			partition@0 {
++				label = "u-boot";
++				reg = <0x0 0x3f0000>;
++				read-only;
++			};
++
++			partition@3f0000 {
++				label = "u-boot-env";
++				reg = <0x3f0000 0x10000>;
++				read-only;
++			};
++		};
++	};
++};
++
++&cp0_ethernet {
++	status = "okay";
++};
++
++/* 10G link to 88E6193X port 0, comphy lane 4 */
++&cp0_eth0 {
++	status = "okay";
++	phy-mode = "10gbase-r";
++	phys = <&cp0_comphy4 0>;
++	managed = "in-band-status";
++};
++
++&cp0_mdio {
++	status = "okay";
++
++	switch@2 {
++		compatible = "marvell,mv88e6190";
++		#address-cells = <1>;
++		#size-cells = <0>;
++		reg = <2>;
++		/*
++		 * The switch reset line is CP GPIO2 pin 17 (stock U-Boot
++		 * "sw_init_p0: gpio clear C17 … gpio set C17"; U-Boot names the
++		 * banks A = AP, B = CP gpio1, C = CP gpio2). It is deliberately
++		 * not given to the driver as reset-gpios: after reset the 6193X
++		 * needs far longer than mv88e6xxx's 10 ms + 50 ms poll (stock
++		 * waits 2 s), and probing times out with -ETIMEDOUT. The reset
++		 * is done by whatever starts this kernel (bootloader or kexec
++		 * wrapper) instead.
++		 */
++
++		ports {
++			#address-cells = <1>;
++			#size-cells = <0>;
++
++			port@0 {
++				reg = <0>;
++				label = "cpu";
++				ethernet = <&cp0_eth0>;
++				phy-mode = "10gbase-r";
++				managed = "in-band-status";
++			};
++
++			port@1 {
++				reg = <1>;
++				label = "p1";
++			};
++
++			port@2 {
++				reg = <2>;
++				label = "p2";
++			};
++
++			port@3 {
++				reg = <3>;
++				label = "p3";
++			};
++
++			port@4 {
++				reg = <4>;
++				label = "p4";
++			};
++
++			port@5 {
++				reg = <5>;
++				label = "p5";
++			};
++
++			port@6 {
++				reg = <6>;
++				label = "p6";
++			};
++
++			port@7 {
++				reg = <7>;
++				label = "p7";
++			};
++
++			port@8 {
++				reg = <8>;
++				label = "p8";
++			};
++
++			port@9 {
++				reg = <9>;
++				label = "sfp";
++				phy-mode = "1000base-x";
++				managed = "in-band-status";
++				sfp = <&sfp>;
++			};
++		};
++	};
++};
+diff --git a/target/linux/mvebu/image/cortexa72.mk b/target/linux/mvebu/image/cortexa72.mk
+index b6042bb..43f4fac 100644
+--- a/target/linux/mvebu/image/cortexa72.mk
++++ b/target/linux/mvebu/image/cortexa72.mk
+@@ -155,6 +155,17 @@ define Device/iei_puzzle-m902
+ endef
+ TARGET_DEVICES += iei_puzzle-m902
+ 
++define Device/sophos_xgs107w
++  $(call Device/Default-arm64)
++  SOC := cn9130
++  DEVICE_VENDOR := Sophos
++  DEVICE_MODEL := XGS 107w
++  DEVICE_VARIANT := NPU
++  DEVICE_DTS := cn9130-sophos-xgs107w
++  DEVICE_PACKAGES += kmod-dsa-mv88e6xxx uboot-envtools
++endef
++TARGET_DEVICES += sophos_xgs107w
++
+ define Device/solidrun_clearfog-pro
+   $(call Device/Default-arm64)
+   SOC := cn9130
+diff --git a/target/linux/mvebu/patches-6.18/950-net-dsa-mv88e6xxx-continue-without-PTP-clock.patch b/target/linux/mvebu/patches-6.18/950-net-dsa-mv88e6xxx-continue-without-PTP-clock.patch
+new file mode 100644
+index 0000000..1adaff6
+--- /dev/null
++++ b/target/linux/mvebu/patches-6.18/950-net-dsa-mv88e6xxx-continue-without-PTP-clock.patch
+@@ -0,0 +1,79 @@
++From: nicologiuliani6 <nicolo.giuliani6@studio.unibo.it>
++Subject: [PATCH] net: dsa: mv88e6xxx: continue without PTP if the TAI clock is unavailable
++
++On the 88E6193X in the Sophos XGS 107w the TAI clock period register reads
++0, so mv88e6xxx_cc_coeff_get() fails with -ENODEV and the whole switch
++probe is aborted. The switch is fully usable without PTP: disable
++hardware timestamping in that case instead of failing the probe, and
++make the timestamping entry points check that a PTP clock was actually
++registered.
++
++diff -ru a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
++--- a/drivers/net/dsa/mv88e6xxx/chip.c	2026-09-19 01:13:12.911513565 +0200
+++++ b/drivers/net/dsa/mv88e6xxx/chip.c	2026-09-19 01:13:12.947860369 +0200
++@@ -4071,12 +4071,21 @@
++ 	/* Setup PTP Hardware Clock and timestamping */
++ 	if (chip->info->ptp_support) {
++ 		err = mv88e6xxx_ptp_setup(chip);
++-		if (err)
++-			goto unlock;
++-
++-		err = mv88e6xxx_hwtstamp_setup(chip);
++-		if (err)
+++		if (err == -ENODEV) {
+++			/* No usable TAI clock (e.g. its period reads as 0 on
+++			 * some 88E6193X boards): run the switch without PTP
+++			 * rather than failing the whole probe.
+++			 */
+++			dev_warn(chip->dev,
+++				 "PTP clock unavailable, hardware timestamping disabled\n");
+++			err = 0;
+++		} else if (err) {
++ 			goto unlock;
+++		} else {
+++			err = mv88e6xxx_hwtstamp_setup(chip);
+++			if (err)
+++				goto unlock;
+++		}
++ 	}
++ 
++ 	err = mv88e6xxx_stats_setup(chip);
++diff -ru a/drivers/net/dsa/mv88e6xxx/hwtstamp.c b/drivers/net/dsa/mv88e6xxx/hwtstamp.c
++--- a/drivers/net/dsa/mv88e6xxx/hwtstamp.c	2026-09-19 01:13:12.917563287 +0200
+++++ b/drivers/net/dsa/mv88e6xxx/hwtstamp.c	2026-09-19 01:13:12.948487187 +0200
++@@ -72,7 +72,7 @@
++ 	chip = ds->priv;
++ 	ptp_ops = chip->info->ops->ptp_ops;
++ 
++-	if (!chip->info->ptp_support)
+++	if (!chip->info->ptp_support || !chip->ptp_clock)
++ 		return -EOPNOTSUPP;
++ 
++ 	info->so_timestamping =
++@@ -176,7 +176,7 @@
++ 	struct mv88e6xxx_port_hwtstamp *ps = &chip->port_hwtstamp[port];
++ 	int err;
++ 
++-	if (!chip->info->ptp_support)
+++	if (!chip->info->ptp_support || !chip->ptp_clock)
++ 		return -EOPNOTSUPP;
++ 
++ 	err = mv88e6xxx_set_hwtstamp_config(chip, port, config);
++@@ -195,7 +195,7 @@
++ 	struct mv88e6xxx_chip *chip = ds->priv;
++ 	struct mv88e6xxx_port_hwtstamp *ps = &chip->port_hwtstamp[port];
++ 
++-	if (!chip->info->ptp_support)
+++	if (!chip->info->ptp_support || !chip->ptp_clock)
++ 		return -EOPNOTSUPP;
++ 
++ 	*config = ps->tstamp_config;
++@@ -213,7 +213,7 @@
++ 	struct mv88e6xxx_port_hwtstamp *ps = &chip->port_hwtstamp[port];
++ 	struct ptp_header *hdr;
++ 
++-	if (!chip->info->ptp_support)
+++	if (!chip->info->ptp_support || !chip->ptp_clock)
++ 		return NULL;
++ 
++ 	hdr = ptp_parse_header(skb, type);

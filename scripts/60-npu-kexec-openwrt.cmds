@@ -1,0 +1,4 @@
+stty -F /dev/ttyS2 115200 raw -echo -echoe -echok; for p in $(ps | grep "cat /dev/ttyS2" | grep -v grep | awk '{print $2}'); do kill $p; done; rm -f /tmp/npu.log; (cat /dev/ttyS2 > /tmp/npu.log &)
+until curl -s -o /dev/null http://192.168.88.254:8001/SHA256SUMS.owrt; do sleep 2; done; for f in owrt-initramfs.bin xgs-kexec.dtb kexec; do curl -sS http://192.168.88.254:8001/$f | xgs-ssh.sh "cat > /tmp/$f"; done; xgs-ssh.sh "chmod +x /tmp/kexec; cd /tmp && sha256sum owrt-initramfs.bin xgs-kexec.dtb kexec"
+xgs-ssh.sh "/tmp/kexec -l /tmp/owrt-initramfs.bin --dtb=/tmp/xgs-kexec.dtb --append=\"console=ttyS0,115200n8 earlycon=uart8250,mmio32,0xf0512000\"; echo LOAD_RC=\$?"
+xgs-ssh.sh "G=/sys/class/gpio; echo 81 > \$G/export 2>/dev/null; echo out > \$G/gpio81/direction; echo 0 > \$G/gpio81/value; sleep 1; echo 1 > \$G/gpio81/value; sleep 2; sync; /tmp/kexec -e" >/dev/null 2>&1 </dev/null &

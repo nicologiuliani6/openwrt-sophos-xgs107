@@ -1,0 +1,4 @@
+bootcmd_stock setenv bootargs ${bootargs_emmc3}; ext4load mmc 0:3 ${kernel_addr_r} /boot/Image; ext4load mmc 0:3 ${fdt_addr_r} /boot/cn9130-senao-xgs.dtb; run fdt_set_partno; booti ${kernel_addr_r} - ${fdt_addr_r}
+bootargs_owrt console=ttyS0,115200n8 earlycon=uart8250,mmio32,0xf0512000 rootwait root=/dev/mmcblk0p1 rw
+bootcmd_owrt run sw_init_p0; setenv bootargs ${bootargs_owrt}; ext4load mmc 0:1 ${kernel_addr_r} /boot/Image && ext4load mmc 0:1 ${fdt_addr_r} /boot/cn9130-sophos-xgs107w.dtb && booti ${kernel_addr_r} - ${fdt_addr_r}
+bootcmd run bootcmd_owrt; run bootcmd_stock

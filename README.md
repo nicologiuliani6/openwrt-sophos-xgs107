@@ -45,6 +45,15 @@ Target: **mainline Linux, then OpenWrt, running on the CN9130 itself**.
 
 The x86 (and its Wi-Fi) is a later, optional phase.
 
+**Status 2026-09-19:**
+- mainline Linux and **OpenWrt run on the CN9130** (booted from RAM with
+  kexec), with all 8 ports + SFP via DSA;
+- WAN DHCP works and gigabit line rate is measured (941 Mbit/s);
+- the eMMC install is prepared but not yet executed.
+
+Details: [docs/bench-log.md](docs/bench-log.md) §11-16,
+[openwrt/](openwrt/), [docs/openwrt-install.md](docs/openwrt-install.md).
+
 Order of work (plan approved 2026-09-18):
 
 0. Document everything — done: [docs/bench-log.md](docs/bench-log.md),

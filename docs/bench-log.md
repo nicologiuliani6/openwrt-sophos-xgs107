@@ -333,6 +333,48 @@ After the reset-then-kexec cycle:
 - Not yet tested: forwarding between two front ports and routing
   throughput. Both need a second device on another port.
 
+### 15. OpenWrt on the CN9130 (RAM boot via kexec)
+
+Built OpenWrt `main` (b6ba4e9, kernel 6.18.52) for `mvebu/cortexa72` with
+the new `sophos_xgs107w` device (`openwrt/`). Toolchain plus image: 39 min.
+
+- First boot: OpenWrt came up (procd, console, `board_name` =
+  `sophos,xgs107w-npu`), but **no switch ports**.
+  `mv88e6085 …: unexpected cycle counter period of 0 ps`: OpenWrt builds
+  mv88e6xxx with PTP, the 88E6193X here reads a TAI clock period of 0, and
+  the driver fails the whole probe on that.
+- Fix: `patches/950-net-dsa-mv88e6xxx-continue-without-PTP-clock.patch`.
+  On `-ENODEV` from the PTP setup it warns, disables hardware
+  timestamping and carries on. The timestamping entry points check for a
+  registered PTP clock. 26 changed lines.
+- Recovery from OpenWrt: SysRq is disabled there (the `b` arrived as a
+  shell command), so `61-npu-recover.sh` now also types `reboot -f` on the
+  NPU console.
+
+Second boot (patched), all checked over the NPU console and from the PC:
+- `p1`…`p8`, `sfp`, `br-lan`; `eth0` at 10000 Mb/s.
+- **WAN (panel port 2) got a DHCP lease from the home router**
+  (192.168.88.155) and answers ping. LAN is `192.168.1.1`.
+- MACs: LAN/p1 `…:62` = label MAC, WAN/p2 `…:63`, derived from U-Boot
+  `ethaddr` (label + 9) exactly as SFOS assigned them. `fw_printenv` reads
+  the env.
+- **iperf3 PC ↔ OpenWrt over the WAN port: 943 Mbit/s up, 941 Mbit/s
+  down**, which is gigabit line rate. The OpenWrt→PC direction showed 6801
+  TCP retransmits in 10 s (flow control is off on the ports; to be tuned).
+
+### 16. eMMC install: prepared, not executed
+
+- `scripts/80-mk-emmc-slot.sh` builds `dumps/openwrt/xgs107w-p1.img`:
+  the OpenWrt ext4 rootfs grown to exactly the p1 size (524288000 bytes),
+  plus `/boot/Image` and `/boot/cn9130-sophos-xgs107w.dtb`, fsck-clean.
+  sha256 `74f621117b25a24192baa011d074763715a8cc969510ef33fe43cbb3621fd6f6`.
+- `scripts/81-uboot-env-openwrt.txt`: U-Boot env for `fw_setenv -s`.
+  It boots OpenWrt from p1 and falls back to the stock slot p3.
+- Procedure: [openwrt-install.md](openwrt-install.md).
+- **Writing p1 was blocked by the agent's permission policy** (it
+  overwrites a Sophos slot, although that slot is fully backed up). The
+  unit was left on **stock** firmware, with p1 untouched.
+
 ---
 
 ## Open questions after session 1
