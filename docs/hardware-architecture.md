@@ -83,7 +83,8 @@ eMMC `mmcblk0`, 7.28 GiB (`8GTF4R`, HS200):
 | p2 | 1.5 GiB | rootfs slot (`bootcmd_emmc2`) |
 | p3 | 1.5 GiB | rootfs slot (`bootcmd_emmc3`) — **active** (`root=/dev/mmcblk0p3`) |
 | p4 | 100 MiB | `/persistent` |
-| boot0 / boot1 | 4 MiB each | eMMC HW boot partitions |
+| (free) | ~3.7 GiB | unallocated after p4 (MBR, sectors 7473152–15269887) |
+| boot0 / boot1 | 4 MiB each | eMMC HW boot partitions, all zero |
 
 ### u-boot environment (relevant parts)
 

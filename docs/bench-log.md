@@ -168,6 +168,42 @@ Network note: the XGS **Port1 is SFOS's LAN and runs a DHCP server**
 (`dhcpd`). Do not plug Port1 into another network. **Port2 and Port4 are
 WAN ports with DHCP clients** (`udhcpc`); use Port2 to join the home LAN.
 
+### 8. Full backup (Phase 1)
+
+- XGS **Port2** (WAN, DHCP client) plugged into the home LAN; it got a
+  lease on the same subnet as the PC.
+- PC: `scripts/50-dump-receiver.py` (HTTP PUT into `dumps/`, never
+  overwrites, logs sha256). Self-tested first: chunked and fixed-length
+  uploads, a 409 on overwrite, a 403 on path traversal.
+- XGS: `xgs-ssh.sh "cat /dev/<dev>" | curl -sS -T - http://<pc>:8000/…`,
+  streamed with no temp files. The whole 7.3 GiB eMMC took about 5 minutes
+  (~25 MB/s).
+- **Every NPU dump was verified** against a `sha256sum` run on the NPU
+  itself, including the whole eMMC and each partition. Index:
+  [dumps-manifest.md](dumps-manifest.md).
+
+What the dumps show:
+
+- u-boot: **U-Boot 2019.10-10.22.03** (Marvell SDK), TF-A
+  `v2.2(release):1ef15fe (Marvell-10.22.06)`. The compiled-in default env
+  boots slot 1. The saved env (`mtd1`) boots slot 3.
+- eMMC is MBR: p1 500 MiB, p2 and p3 1.5 GiB each, p4 100 MiB, then
+  **~3.7 GiB unallocated**. That free space can hold our own system
+  without touching any Sophos slot.
+- p2 and p3 `/boot` hold `Image`, `cn9130-senao-xgs.dtb`,
+  `xgsdt1-boot.img` (Sophos u-boot image, 1.5 MB) and
+  `xgsdt1-boot-env.bin`. p1 holds only an older `Image` + DTB.
+- `mmcblk0boot0/1` are all zeros (unused).
+- No NPU images were found on the x86 filesystem outside the NPU itself.
+
+**Safety finding for Phase 2:** `npu_host_keep_alive.sh` runs **on the
+NPU**. It pings the x86 over `mvmgmt0` every 5 s. After 60 s of misses,
+if PCIe error registers are set (`txcsr SDP0_EPF0_*RERR_RINT`,
+`PEM0_DBG_INFO`), it **power-cycles the whole appliance through the CPLD**
+(`ispvme /persistent/flash_refresh.vme`). Running a non-SFOS OS on the
+x86 while the NPU still runs stock can therefore trigger reboots. Either
+keep the NPU in u-boot or on our own kernel, or stop that daemon first.
+
 ---
 
 ## Open questions after session 1
@@ -177,5 +213,5 @@ WAN ports with DHCP clients** (`udhcpc`); use Port2 to join the home LAN.
       `ttyS0`. Candidates: 1.8 V logic not seen by the Arduino, a mux or
       CPLD, or TX on pin 3.
 - [x] What does SFOS see? Answered in §7 and hardware-architecture.md.
-- [ ] Where does SFOS keep the NPU u-boot and rootfs images?
+- [x] Where does SFOS keep the NPU u-boot image? In the NPU rootfs `/boot` (p2/p3), see §8.
 - [ ] Sharp photo of the 2×4 header and of `U41`.
