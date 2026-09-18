@@ -43,6 +43,15 @@ eMMC partitions (MBR), hashes identical on the device and in the image:
 | `dumps/x86/sysinfo.txt` | dmidecode, /proc, lsmod, ip | 44151 | `98a240636e0d6bf1640e3d1906a930e8ba117bcaf2d61a54960d77c417ae122a` |
 | `dumps/x86/npu-image-candidates.txt` | find for NPU images on x86 — none found | 0 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
 
+SFOS's own NPU images, from `/sdisk/npu/` on the x86 disk. These are the
+images SFOS reinstalls onto the NPU from; see `npu_host_validation.sh`.
+Verified by md5 on the x86 (no `sha256sum` there), both match:
+
+| File | Size | sha256 (PC) | md5 (x86 = PC) |
+|---|---|---|---|
+| `dumps/x86/sdisk-npu/npu_slot1_19_5_3_652.img` | 624132096 | `3ad66e6be471bdadd81b3145c4a66f71099801b5ea3ff3913a4f027c04ec3ecf` | `6fb8a377041e26910869bf3c16bf6dd0` |
+| `dumps/x86/sdisk-npu/npu_slot2_19_5_4_718.img` | 589017088 | `92afd57b2aa77a076d5643c1b2ba39cb8367d1055eb94bc651b8dc5a4aa432ba` | `51f3b4a67eb3ca52334de672a8f661b3` |
+
 Derived, local only: `dumps/npu/parts/p{1..4}.img` (partitions cut from the
 full image) and `dumps/x86/tooling/` (unpacked tarball).
 

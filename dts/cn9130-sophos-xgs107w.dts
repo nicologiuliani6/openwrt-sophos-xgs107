@@ -1,0 +1,235 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Sophos XGS 87(w) / 107(w) — NPU complex: Marvell CN9130 + 88E6193X.
+ *
+ * Derived from the stock "Marvell CN9130 Senao XGS board" device tree
+ * (cn9130-senao-xgs.dtb, SFOS 19.5.4) and SFOS's xgs-platform port map.
+ * See docs/hardware-architecture.md.
+ *
+ * The x86 host on the same board is not described here: the CN9130 is a
+ * PCIe endpoint towards it, and endpoint mode is not used by this DT.
+ */
+
+/dts-v1/;
+
+#include "cn9130.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	model = "Sophos XGS 107w (CN9130 NPU)";
+	compatible = "sophos,xgs107w-npu", "marvell,cn9130",
+		     "marvell,armada-ap807-quad", "marvell,armada-ap807";
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	aliases {
+		ethernet0 = &cp0_eth0;
+		i2c0 = &cp0_i2c0;
+		i2c1 = &cp0_i2c1;
+		spi1 = &cp0_spi1;
+	};
+
+	memory@0 {
+		device_type = "memory";
+		reg = <0x0 0x0 0x0 0x80000000>;
+	};
+
+	reserved-memory {
+		/* OP-TEE, as reserved by the stock firmware (TF-A 10.22.06) */
+		tee@4400000 {
+			reg = <0x0 0x4400000 0x0 0x1000000>;
+			no-map;
+		};
+
+		/*
+		 * Buffers of the stock SFOS NPU firmware (PCIe console and the
+		 * userspace fast path). Only needed when this kernel is started
+		 * with kexec from the stock NPU Linux, whose packet engines may
+		 * still be DMAing into them. Drop once booted from U-Boot.
+		 */
+		stock-pci-console@3f000000 {
+			reg = <0x0 0x3f000000 0x0 0x1000000>;
+			no-map;
+		};
+
+		stock-usfp@40000000 {
+			reg = <0x0 0x40000000 0x0 0x1b000000>;
+			no-map;
+		};
+	};
+
+	/* Front-panel SFP "F1", wired to 88E6193X port 9 */
+	sfp: sfp {
+		compatible = "sff,sfp";
+		i2c-bus = <&cp0_i2c1>;
+		los-gpios = <&cp0_gpio1 1 GPIO_ACTIVE_HIGH>;
+		tx-fault-gpios = <&cp0_gpio1 2 GPIO_ACTIVE_HIGH>;
+		mod-def0-gpios = <&cp0_gpio1 3 GPIO_ACTIVE_LOW>;
+		tx-disable-gpios = <&cp0_gpio1 7 GPIO_ACTIVE_HIGH>;
+		maximum-power-milliwatt = <2000>;
+	};
+};
+
+&uart0 {
+	status = "okay";
+};
+
+/* 8 GB eMMC on the AP */
+&ap_sdhci0 {
+	bus-width = <8>;
+	non-removable;
+	mmc-ddr-1_8v;
+	status = "okay";
+};
+
+/*
+ * MPP muxing is left as set up by the stock U-Boot: no pin groups are
+ * claimed here, the controller only exists for the GPIO banks.
+ */
+&cp0_syscon0 {
+	cp0_pinctrl: pinctrl {
+		compatible = "marvell,cp115-standalone-pinctrl";
+	};
+};
+
+&cp0_gpio1 {
+	status = "okay";
+};
+
+&cp0_gpio2 {
+	status = "okay";
+};
+
+&cp0_i2c0 {
+	clock-frequency = <100000>;
+	status = "okay";
+
+	/* Port speed LEDs (xgs-platform "gpio:3:*") */
+	led_gpio: gpio@20 {
+		compatible = "nxp,pca9555";
+		reg = <0x20>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
+};
+
+&cp0_i2c1 {
+	/* SFP EEPROM (0x50/0x51) */
+	clock-frequency = <100000>;
+	status = "okay";
+};
+
+/* 4 MB SPI NOR: stock U-Boot + env. Read-only on purpose. */
+&cp0_spi1 {
+	status = "okay";
+
+	flash@0 {
+		compatible = "jedec,spi-nor";
+		reg = <0>;
+		spi-max-frequency = <40000000>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			partition@0 {
+				label = "u-boot";
+				reg = <0x0 0x3f0000>;
+				read-only;
+			};
+
+			partition@3f0000 {
+				label = "u-boot-env";
+				reg = <0x3f0000 0x10000>;
+				read-only;
+			};
+		};
+	};
+};
+
+&cp0_ethernet {
+	status = "okay";
+};
+
+/* 10G link to 88E6193X port 0, comphy lane 4 */
+&cp0_eth0 {
+	status = "okay";
+	phy-mode = "10gbase-r";
+	phys = <&cp0_comphy4 0>;
+	managed = "in-band-status";
+};
+
+&cp0_mdio {
+	status = "okay";
+
+	switch@2 {
+		compatible = "marvell,mv88e6190";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <2>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				label = "cpu";
+				ethernet = <&cp0_eth0>;
+				phy-mode = "10gbase-r";
+				managed = "in-band-status";
+			};
+
+			port@1 {
+				reg = <1>;
+				label = "lan1";
+			};
+
+			port@2 {
+				reg = <2>;
+				label = "lan2";
+			};
+
+			port@3 {
+				reg = <3>;
+				label = "lan3";
+			};
+
+			port@4 {
+				reg = <4>;
+				label = "lan4";
+			};
+
+			port@5 {
+				reg = <5>;
+				label = "lan5";
+			};
+
+			port@6 {
+				reg = <6>;
+				label = "lan6";
+			};
+
+			port@7 {
+				reg = <7>;
+				label = "lan7";
+			};
+
+			port@8 {
+				reg = <8>;
+				label = "lan8";
+			};
+
+			port@9 {
+				reg = <9>;
+				label = "sfp";
+				phy-mode = "1000base-x";
+				managed = "in-band-status";
+				sfp = <&sfp>;
+			};
+		};
+	};
+};

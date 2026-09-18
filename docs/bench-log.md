@@ -204,6 +204,38 @@ if PCIe error registers are set (`txcsr SDP0_EPF0_*RERR_RINT`,
 x86 while the NPU still runs stock can therefore trigger reboots. Either
 keep the NPU in u-boot or on our own kernel, or stop that daemon first.
 
+### 9. Phase 2 groundwork
+
+- **NPU console path verified.** With x86 `/dev/ttyS2` set to 115200 raw
+  and read in the background, `xgs-ssh.sh "echo PING-FROM-NPU-TTYS0 >
+  /dev/ttyS0"` arrived on `ttyS2`. The Arduino on the `NPU COM` header,
+  listening at the same moment, received nothing. The header is not on
+  this line, or at least not readable this way.
+- SFOS keeps the official NPU images on the x86 disk in
+  `/sdisk/npu/npu_slot<N>_<version>.img`. They were backed up (see the
+  manifest).
+- **SFOS boot-time NPU validation** (`/scripts/npu/npu_host_validation.sh`):
+  - `xgs-ssh.sh mount` fails (NPU unreachable): logs reason 1 and enters
+    failsafe, **no reflash**;
+  - NPU reachable but incompatible: reinstalls the NPU from
+    `/sdisk/npu/…` (`xgs-base-npu-fw.sh --default`) and reboots;
+  - otherwise it checks and possibly rewrites the NPU u-boot
+    ("Checking for NPU uboot mismatch").
+
+  Consequence: while our own OS is on the NPU, **do not reboot the x86
+  into SFOS**. Use a live Linux on the x86, or leave SFOS running without
+  rebooting it.
+- Toolchain on the PC: `gcc-aarch64-linux-gnu` 14.2, `dtc` 1.7.2. Kernel
+  **6.18.52 LTS**, matching OpenWrt `mvebu` (`KERNEL_PATCHVER:=6.18`). It
+  already has `MV88E6193X` in `mv88e6xxx` and CN9130 board DTs
+  (`cn9130-crb`, `cn9130-cf-pro`, `cn9130-db`).
+- Stock DT decompiled from p3 `/boot/cn9130-senao-xgs.dtb`. Key nodes:
+  `mvpp2` port 0 `10gbase-kr` on comphy lane 4; `mdio@12a200` →
+  `switch@2`; two PCA9555 GPIO expanders at `0x20` on `i2c@701000` and
+  `i2c@701100`; SPI NOR on `spi@700600`; eMMC on AP `sdhci@6e0000`
+  (8-bit, 1.8 V); `reserved-memory` hides 432 MiB at `0x40000000` for the
+  Sophos fast path.
+
 ---
 
 ## Open questions after session 1
