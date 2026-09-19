@@ -1,0 +1,35 @@
+From: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
+Subject: [PATCH] ntb: ntb_hw_epf: prefer MSI over MSI-X
+
+---
+--- a/drivers/ntb/hw/epf/ntb_hw_epf.c
++++ b/drivers/ntb/hw/epf/ntb_hw_epf.c
+@@ -366,16 +366,22 @@
+ 	int ret;
+ 	int i;
+ 
+-	irq = pci_alloc_irq_vectors(pdev, msi_min, msi_max, PCI_IRQ_MSIX);
+-	if (irq < 0) {
+-		dev_dbg(dev, "Failed to get MSIX interrupts\n");
++	/*
++	 * Prefer MSI: pci-epf-vntb raises MSI, and endpoint controllers whose
++	 * MSI-X capability is always present (DesignWare) would otherwise be
++	 * signalled through an MSI-X table that the function never fills in.
++	 */
++	irq = pci_alloc_irq_vectors(pdev, msi_min, msi_max, PCI_IRQ_MSI);
++	if (irq >= 0) {
++		argument &= ~MSIX_ENABLE;
++	} else {
++		dev_dbg(dev, "Failed to get MSI interrupts\n");
+ 		irq = pci_alloc_irq_vectors(pdev, msi_min, msi_max,
+-					    PCI_IRQ_MSI);
++					    PCI_IRQ_MSIX);
+ 		if (irq < 0) {
+-			dev_err(dev, "Failed to get MSI interrupts\n");
++			dev_err(dev, "Failed to get MSIX interrupts\n");
+ 			return irq;
+ 		}
+-		argument &= ~MSIX_ENABLE;
+ 	}
+ 
+ 	ndev->db_count = irq - 1;

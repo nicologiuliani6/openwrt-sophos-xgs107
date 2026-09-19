@@ -1,0 +1,45 @@
+From: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
+Subject: [PATCH] PCI: dwc: plat: endpoint mode on Armada 8K / CN913x
+
+- advertise 1M BAR alignment: the BAR match iATU on this core ignores the
+  low 20 bits of the target (the BARs are 1M), so a BAR backed by memory
+  that is only page or 64K aligned makes the host read and write a
+  different place than the endpoint function thinks (vNTB's control BAR)
+- disable the iATU windows the boot firmware left enabled
+
+---
+--- a/drivers/pci/controller/dwc/pcie-designware-plat.c
++++ b/drivers/pci/controller/dwc/pcie-designware-plat.c
+@@ -10,6 +10,7 @@
+ #include <linux/delay.h>
+ #include <linux/gpio.h>
+ #include <linux/interrupt.h>
++#include <linux/io.h>
+ #include <linux/kernel.h>
+ #include <linux/init.h>
+ #include <linux/of.h>
+@@ -36,9 +37,16 @@
+ {
+ 	struct dw_pcie *pci = to_dw_pcie_from_ep(ep);
+ 	enum pci_barno bar;
++	u32 i;
+ 
+ 	for (bar = 0; bar < PCI_STD_NUM_BARS; bar++)
+ 		dw_pcie_ep_reset_bar(pci, bar);
++
++	/* drop the iATU windows the boot firmware left behind */
++	for (i = 0; i < pci->num_ib_windows; i++)
++		dw_pcie_disable_atu(pci, PCIE_ATU_REGION_DIR_IB, i);
++	for (i = 0; i < pci->num_ob_windows; i++)
++		dw_pcie_disable_atu(pci, PCIE_ATU_REGION_DIR_OB, i);
+ }
+ 
+ static int dw_plat_pcie_ep_raise_irq(struct dw_pcie_ep *ep, u8 func_no,
+@@ -63,6 +71,7 @@
+ static const struct pci_epc_features dw_plat_pcie_epc_features = {
+ 	.msi_capable = true,
+ 	.msix_capable = true,
++	.align = SZ_1M,
+ };
+ 
+ static const struct pci_epc_features*

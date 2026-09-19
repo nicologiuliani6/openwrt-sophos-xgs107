@@ -28,6 +28,8 @@ start() {
 	echo 0x10 > $N/vbus_number
 	[ -e $C/controllers/$EPC/func1 ] || ln -s $F $C/controllers/$EPC/func1
 	echo 1 > $C/controllers/$EPC/start
+	# after the function exists: ntb_netdev then creates ntb0 (autoload at boot is too early)
+	modprobe ntb_netdev
 }
 
 stop() {
