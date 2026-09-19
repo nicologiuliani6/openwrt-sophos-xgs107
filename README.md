@@ -12,8 +12,8 @@ You need the appliance, a PC on the same network, and the x86 console
 open the SFOS advanced shell (login `admin`, menu 5, then 3), then on the PC:
 
 ```sh
-git clone https://github.com/nicologiuliani6/sophos-xgs107w-prestera.git
-cd sophos-xgs107w-prestera
+git clone https://github.com/nicologiuliani6/openwrt-sophos-xgs107.git
+cd openwrt-sophos-xgs107
 ./install.sh --serial
 ```
 
