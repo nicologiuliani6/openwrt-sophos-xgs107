@@ -13,7 +13,7 @@ that starts with `linux`, appends the given text to it and boots with Ctrl-X.
 With --show it leaves the editor with Esc instead and changes nothing.
 A tiny terminal emulator rebuilds the screen from GRUB's ANSI output.
 """
-import argparse, os, re, select, sys, termios, time
+import argparse, glob, os, re, select, sys, termios, time
 
 ROWS, COLS = 30, 100
 CSI = re.compile(r'\x1b\[([0-9;?]*)([A-Za-z])')
@@ -68,36 +68,75 @@ def replay(path):
 
 
 class Port:
+    """The USB-serial bridge vanishes while the XGS is unpowered and comes
+    back on a new ttyUSBn: (re)open it whenever it is missing or fails."""
+
     def __init__(self, dev, baud):
-        self.fd = os.open(dev, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
-        t = termios.tcgetattr(self.fd)
-        t[0] = t[1] = t[3] = 0
-        t[2] = termios.CS8 | termios.CREAD | termios.CLOCAL
-        t[4] = t[5] = getattr(termios, f'B{baud}')
-        termios.tcsetattr(self.fd, termios.TCSANOW, t)
+        self.dev, self.baud, self.fd, self.node = dev, baud, None, None
         self.screen = Screen()
         self.raw = ''
+        self.reopen()
+
+    def path(self):
+        m = sorted(glob.glob(self.dev))
+        return m[0] if m else None
+
+    def reopen(self):
+        if self.fd is not None:
+            try:
+                os.close(self.fd)
+            except OSError:
+                pass
+            self.fd = None
+        try:
+            path = self.path()                       # look it up once: it can vanish any time
+            if path is None:
+                return False
+            fd = os.open(path, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
+            node = os.path.realpath(path)
+            t = termios.tcgetattr(fd)
+            t[0] = t[1] = t[3] = 0
+            t[2] = termios.CS8 | termios.CREAD | termios.CLOCAL
+            t[4] = t[5] = getattr(termios, f'B{self.baud}')
+            termios.tcsetattr(fd, termios.TCSANOW, t)
+        except (OSError, termios.error):
+            return False
+        self.fd, self.node = fd, node
+        print(f'  console open: {self.node}', flush=True)
+        return True
 
     def pump(self, secs):
         end = time.time() + secs
         while time.time() < end:
-            if select.select([self.fd], [], [], 0.05)[0]:
-                try:
-                    d = os.read(self.fd, 4096).decode(errors='replace')
-                except BlockingIOError:
+            cur = self.path()
+            if self.fd is None or cur is None or os.path.realpath(cur) != self.node:
+                if not self.reopen():
+                    time.sleep(0.5)
                     continue
-                self.raw += d
-                self.screen.feed(d)
+            try:
+                if select.select([self.fd], [], [], 0.05)[0]:
+                    d = os.read(self.fd, 4096).decode(errors='replace')
+                    self.raw += d
+                    self.screen.feed(d)
+            except BlockingIOError:
+                continue
+            except OSError:            # unplugged under us
+                self.fd = None
 
     def send(self, s, gap=0.05):
         for ch in s:
-            os.write(self.fd, ch.encode())
+            try:
+                os.write(self.fd, ch.encode())
+            except OSError:
+                self.fd = None
+                return
             time.sleep(gap)
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--dev', default='/dev/ttyUSB0')
+    ap.add_argument('--dev', default='/dev/serial/by-id/usb-Prolific*-port0',
+                    help='by-id path survives the ttyUSBn renumbering after a power cycle')
     ap.add_argument('--baud', type=int, default=38400)
     ap.add_argument('--append', default='')
     ap.add_argument('--show', action='store_true')

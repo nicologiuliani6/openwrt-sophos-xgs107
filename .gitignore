@@ -24,3 +24,4 @@ logs/*.log
 
 # Claude Code personal settings
 .claude/settings.local.json
+__pycache__/
