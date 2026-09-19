@@ -64,13 +64,18 @@ collect_npu() {
 
 collect_x86() {
 	B=$OPENWRT_DIR/bin/targets/x86/64
+	# The ext4 root comes from build_dir, not from bin/: the *-ext4-rootfs.img in bin/ is
+	# padded with dd bs=<partition size>, which for more than 2 GiB doubles it and shifts
+	# the data behind the first 2 GiB.
+	R=$(ls -d "$OPENWRT_DIR"/build_dir/target-x86_64_*/linux-x86_64 | head -1)/root.ext4
+	[ -f "$R" ] || { echo "missing $R" >&2; exit 1; }
 	cp "$B/openwrt-x86-64-generic-kernel.bin" "$DIST_DIR/x86-vmlinuz"
-	gzip -9c "$B/openwrt-x86-64-generic-ext4-rootfs.img" > "$DIST_DIR/x86-rootfs.img.gz"
+	gzip -9c "$R" > "$DIST_DIR/x86-rootfs.img.gz"
 	{
 		echo "KMD5=$(md5sum "$DIST_DIR/x86-vmlinuz" | cut -d' ' -f1)"
-		echo "RMD5=$(md5sum "$B/openwrt-x86-64-generic-ext4-rootfs.img" | cut -d' ' -f1)"
-		echo "RHEAD_MD5=$(head -c 536870912 "$B/openwrt-x86-64-generic-ext4-rootfs.img" | md5sum | cut -d' ' -f1)"
-		echo "RSIZE=$(stat -c %s "$B/openwrt-x86-64-generic-ext4-rootfs.img")"
+		echo "RMD5=$(md5sum "$R" | cut -d' ' -f1)"
+		echo "RHEAD_MD5=$(head -c 536870912 "$R" | md5sum | cut -d' ' -f1)"
+		echo "RSIZE=$(stat -c %s "$R")"
 	} > "$DIST_DIR/x86-env.sh"
 }
 
