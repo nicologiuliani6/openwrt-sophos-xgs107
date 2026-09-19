@@ -23,7 +23,7 @@ The details are in patch 3.
 
 Tested on an XGS 107w with Linux 6.18: boot from eMMC, eMMC and SPI NOR
 access, the mvpp2 link to the switch at 10 Gb/s, the 88E6193X probing with
-its eight user ports, and 941 Mbit/s through a front port. The SFP cage
+its eight user ports, and 936 Mbit/s through a front port. The SFP cage
 and the PCA9555 outputs are untested.
 
 dt_binding_check passes for vendor-prefixes.yaml and armada-7k-8k.yaml,
