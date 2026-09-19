@@ -1,4 +1,4 @@
-From b589270abe0fe5f5f9fb9249c2ce016dae19d690 Mon Sep 17 00:00:00 2001
+From efa0dc08c42a57979e696497962926d222abc7c1 Mon Sep 17 00:00:00 2001
 From: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
 Date: Sat, 19 Sep 2026 09:22:53 +0200
 Subject: [PATCH 2/4] dt-bindings: arm: marvell: Add Sophos XGS 107w NPU
@@ -10,6 +10,7 @@ through an 88E6193X switch, and it sits behind a PCIe link to an x86
 host.
 
 Assisted-by: Claude:claude-sonnet-5
+Signed-off-by: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
 ---
  .../devicetree/bindings/arm/marvell/armada-7k-8k.yaml    | 9 +++++++++
  1 file changed, 9 insertions(+)

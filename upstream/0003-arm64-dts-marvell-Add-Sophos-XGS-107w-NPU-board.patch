@@ -1,4 +1,4 @@
-From 4dd3d1c32edcc244c5a9c1ef0911a251ab853664 Mon Sep 17 00:00:00 2001
+From af410401455f3e4644d54e6ad70e9fde920817e4 Mon Sep 17 00:00:00 2001
 From: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
 Date: Sat, 19 Sep 2026 09:23:35 +0200
 Subject: [PATCH 3/4] arm64: dts: marvell: Add Sophos XGS 107w NPU board
@@ -20,6 +20,7 @@ than the driver waits, and the probe would time out. The boot loader
 resets it before starting the kernel.
 
 Assisted-by: Claude:claude-opus-5
+Signed-off-by: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
 ---
  arch/arm64/boot/dts/marvell/Makefile          |   1 +
  .../dts/marvell/cn9130-sophos-xgs107w.dts     | 231 ++++++++++++++++++

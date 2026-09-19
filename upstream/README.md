@@ -1,6 +1,6 @@
 # Upstream submission for Linux (draft, NOT sent)
 
-Author of all patches: `Nicolo Giuliani <nicologiuliani6@studio.unibo.it>`.
+Author and signer of all patches: `Nicolo Giuliani <nicologiuliani6@studio.unibo.it>`.
 Base: Linux v6.18.52 files. **Before sending, rebase on the current
 subsystem tree** (see below); the driver code in particular may have moved.
 
@@ -76,13 +76,17 @@ patch is small and makes the switch usable meanwhile.
 git clone --depth 1 https://git.kernel.org/pub/scm/linux/kernel/git/netdev/net-next.git
 cd net-next && git checkout -b xgs
 git am ../upstream/0004-*.patch          # adjust if it no longer applies
-git rebase --signoff HEAD~1              # adds Signed-off-by: you (DCO)
+git rebase --signoff HEAD~1              # only needed on a rebuilt tree: the patches are already signed
 scripts/checkpatch.pl --strict -g HEAD
 git send-email --to=netdev@vger.kernel.org --cc=... HEAD~1
 ```
 
 For series A use the arm-soc / mvebu tree (`git://git.kernel.org/pub/scm/linux/kernel/git/gclement/mvebu.git`)
-the same way. `Signed-off-by` is intentionally missing from the patches:
-it is a personal certification of the Developer Certificate of Origin.
-The patches carry an `Assisted-by:` trailer for the AI models that helped
-write them, as the kernel's process documentation asks.
+the same way.
+
+**Signed-off-by:** the four patches carry `Signed-off-by: Nicolo Giuliani
+<nicologiuliani6@studio.unibo.it>`, added on 2026-09-19 at the author's explicit
+request. That line is a personal certification of the Developer Certificate
+of Origin, so read the patches before sending them. They also carry an
+`Assisted-by:` trailer for the AI models that helped write them, as the
+kernel's process documentation asks. Nothing has been sent.
