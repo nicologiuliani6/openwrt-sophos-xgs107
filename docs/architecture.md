@@ -36,7 +36,7 @@ Ethernet link (`ntb0` on both) over the PCIe connection, see
   NPU side (CN9130, `mvpp2`, `sdhci-xenon`, `mv88e6xxx` DSA, SFP) is in
   mainline Linux, so no blobs are needed. L2 switching stays in the
   switch hardware; routing runs on four A72 cores behind a 10G uplink.
-- The x86 used to reach the ports only through Sophos-proprietary kernel
+- Under SFOS the x86 reaches the ports only through Sophos-proprietary kernel
   modules (`mv_armada_drv`, `mv_pcinet_drv`, …, Linux 4.14.277 only). That
   is why a stock Linux or OpenWrt on the x86 sees no ports.
 - The CN9130 is wired to the x86 as a **PCIe endpoint** (that is what

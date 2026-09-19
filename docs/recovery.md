@@ -58,7 +58,7 @@ Sophos's documented console reset: at the console `Password:` prompt type
 confirm with `y`; then log in as `admin` with the factory password `admin`.
 Options 1-3 of that menu are full factory resets: do not use them. Reinstalling is not needed.
 
-## Rescue tips learnt the hard way
+## Pitfalls
 
 - `dd of=<node>` on a node that does not exist creates a regular file in
   RAM. `install-x86.sh` checks `[ -b /dev/swap ]` and verifies through

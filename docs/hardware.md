@@ -1,7 +1,7 @@
 # Hardware reference
 
-Read from a live XGS 107w running SFOS 19.5.4 MR-4 (Build 718), and later
-from the same unit under OpenWrt. Board silkscreen `XGS 87(W) 107(W) 1.40`
+Observed on an XGS 107w running SFOS 19.5.4 MR-4 (Build 718) and under
+OpenWrt. Board silkscreen `XGS 87(W) 107(W) 1.40`
 (one PCB for the XGS 87 and 107; the "w" models have the Wi-Fi card).
 
 ## Panel and connectors
@@ -11,7 +11,7 @@ from the same unit under OpenWrt. Board silkscreen `XGS 87(W) 107(W) 1.40`
 | Ports | 8× GbE RJ45 labelled 1/LAN, 2/WAN, 3/DMZ, 4, 5, 6, 7, 8, and one SFP labelled F1 |
 | USB | 1× USB 3.0 type A. The CN9130 has two xHCI controllers with VBUS switches, the x86 only exposes internal hubs, so the front port is most likely the NPU's (to be confirmed with a device) |
 | Console (x86) | RJ45 (Cisco rollover) **and** micro-USB (Prolific PL2303, `067b:23a3`), 38400 8N1; the micro-USB one takes priority. The PL2303 is renumbered `ttyUSBn` at every power cycle: use `/dev/serial/by-id/usb-Prolific*-port0` |
-| Console (NPU) | wired to the x86's `/dev/ttyS2`, 115200 8N1. The on-board 2×4 `NPU COM` header did not answer on the bench and is not needed |
+| Console (NPU) | wired to the x86's `/dev/ttyS2`, 115200 8N1. The on-board 2×4 `NPU COM` header is unused (it showed no output) |
 | Wi-Fi | M.2/mini-PCIe QCA988x (`168c:003c`, ath10k), two U.FL leads to the SMA connectors |
 | Power | two DC inputs (redundant) |
 
@@ -107,4 +107,4 @@ BAR0 1 MiB / BAR2 16 MiB / BAR4 16 MiB (stock, `[11ab:7080]`); BARs are
 1 MiB granular. The endpoint controller is standard DesignWare (iATU in
 viewport mode, 8 inbound / 8 outbound windows, 64 KiB region alignment) with
 Marvell vendor registers at offset `0x8000` (global control, AXI cache
-attributes). What was learnt about it is in [npu-x86-link.md](npu-x86-link.md).
+attributes). See [npu-x86-link.md](npu-x86-link.md).

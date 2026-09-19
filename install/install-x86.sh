@@ -43,7 +43,7 @@ say "verifying downloads in RAM"
 
 say "sanity checks on the target"
 # SFOS names its partition nodes /dev/boot, /dev/swap, /dev/var: there is NO /dev/sda8. Writing to a
-# missing node with dd silently creates a regular file in RAM (this happened once), so check hard.
+# missing node with dd silently creates a regular file in RAM, so check hard.
 [ -b /dev/swap ] || die "/dev/swap is not a block device"
 [ -b /dev/sda ] || die "/dev/sda is not a block device"
 [ -f /dev/sda8 ] && rm -f /dev/sda8

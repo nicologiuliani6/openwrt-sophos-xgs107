@@ -31,7 +31,7 @@ Internet through the NPU; its LuCI and SSH are reachable from any LAN port.
   without carrier for a minute, so the boot order of the two modules does not
   matter.
 
-## Why it needed patches (found in this order)
+## Why it needs patches
 
 1. **BAR memory must be 1 MiB aligned.** The BAR-match inbound iATU on this
    core ignores the low 20 bits of the target address; the BARs are 1 MiB.
@@ -66,10 +66,9 @@ Internet through the NPU; its LuCI and SSH are reachable from any LAN port.
 - The interface MTU is 2022 (frame size minus headers); bridged with the
   1500-byte LAN it is effectively 1500.
 
-## Getting files onto the x86 before it had a network
+## Copying files to the x86 without a network
 
 `tools/console-put.py LOCAL /tmp/REMOTE` copies a file over the x86's serial
 console (its busybox has no `base64` or `stty`): 48-byte chunks written
 with `echo -ne '\x..'`, each verified with `md5sum` and resent if wrong,
-about 1.5 KB/s. It brought the first NTB modules over; after that everything
-went through the link.
+about 1.5 KB/s. Useful for bootstrapping; with the link up, fetch files over HTTP with `wget`.

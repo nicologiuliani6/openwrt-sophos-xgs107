@@ -13,7 +13,7 @@
 #              (default: the Prolific PL2303 in /dev/serial/by-id)
 #
 # Before: open the SFOS advanced shell on the x86 console (login admin,
-# menu 5 Device Management, then 3 Advanced Shell). Read docs/install.md.
+# menu 5 Device Management, then 3 Advanced Shell). See docs/install.md.
 set -eu
 
 REPO=$(cd "$(dirname "$0")" && pwd)
