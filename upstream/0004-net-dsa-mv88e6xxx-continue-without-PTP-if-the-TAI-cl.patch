@@ -1,0 +1,97 @@
+From 07f186ccb8ac87de0d4ef7ec9a7c38c00f578d26 Mon Sep 17 00:00:00 2001
+From: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
+Date: Sat, 19 Sep 2026 09:23:35 +0200
+Subject: [PATCH 4/4] net: dsa: mv88e6xxx: continue without PTP if the TAI
+ clock is unusable
+
+On the 88E6193X of the Sophos XGS 107w the TAI clock period register
+reads 0 after a hardware reset. mv88e6xxx_cc_coeff_get() then fails with
+-ENODEV ("unexpected cycle counter period of 0 ps"), mv88e6xxx_setup()
+propagates it, and the whole switch probe is aborted, although the
+switch works fine without PTP.
+
+Treat -ENODEV from the PTP setup as "no PTP clock": warn, skip the
+hardware timestamping setup and carry on. As no PHC is then registered,
+make the timestamping entry points check for that as well, since they
+otherwise dereference chip->ptp_clock.
+
+Assisted-by: Claude:claude-opus-5
+---
+ drivers/net/dsa/mv88e6xxx/chip.c     | 19 ++++++++++++++-----
+ drivers/net/dsa/mv88e6xxx/hwtstamp.c |  8 ++++----
+ 2 files changed, 18 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
+index 09002c8..e025936 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.c
++++ b/drivers/net/dsa/mv88e6xxx/chip.c
+@@ -4071,12 +4071,21 @@ static int mv88e6xxx_setup(struct dsa_switch *ds)
+ 	/* Setup PTP Hardware Clock and timestamping */
+ 	if (chip->info->ptp_support) {
+ 		err = mv88e6xxx_ptp_setup(chip);
+-		if (err)
+-			goto unlock;
+-
+-		err = mv88e6xxx_hwtstamp_setup(chip);
+-		if (err)
++		if (err == -ENODEV) {
++			/* No usable TAI clock (e.g. its period reads as 0 on
++			 * some 88E6193X boards): run the switch without PTP
++			 * rather than failing the whole probe.
++			 */
++			dev_warn(chip->dev,
++				 "PTP clock unavailable, hardware timestamping disabled\n");
++			err = 0;
++		} else if (err) {
+ 			goto unlock;
++		} else {
++			err = mv88e6xxx_hwtstamp_setup(chip);
++			if (err)
++				goto unlock;
++		}
+ 	}
+ 
+ 	err = mv88e6xxx_stats_setup(chip);
+diff --git a/drivers/net/dsa/mv88e6xxx/hwtstamp.c b/drivers/net/dsa/mv88e6xxx/hwtstamp.c
+index 6e6472a..847f9dd 100644
+--- a/drivers/net/dsa/mv88e6xxx/hwtstamp.c
++++ b/drivers/net/dsa/mv88e6xxx/hwtstamp.c
+@@ -72,7 +72,7 @@ int mv88e6xxx_get_ts_info(struct dsa_switch *ds, int port,
+ 	chip = ds->priv;
+ 	ptp_ops = chip->info->ops->ptp_ops;
+ 
+-	if (!chip->info->ptp_support)
++	if (!chip->info->ptp_support || !chip->ptp_clock)
+ 		return -EOPNOTSUPP;
+ 
+ 	info->so_timestamping =
+@@ -176,7 +176,7 @@ int mv88e6xxx_port_hwtstamp_set(struct dsa_switch *ds, int port,
+ 	struct mv88e6xxx_port_hwtstamp *ps = &chip->port_hwtstamp[port];
+ 	int err;
+ 
+-	if (!chip->info->ptp_support)
++	if (!chip->info->ptp_support || !chip->ptp_clock)
+ 		return -EOPNOTSUPP;
+ 
+ 	err = mv88e6xxx_set_hwtstamp_config(chip, port, config);
+@@ -195,7 +195,7 @@ int mv88e6xxx_port_hwtstamp_get(struct dsa_switch *ds, int port,
+ 	struct mv88e6xxx_chip *chip = ds->priv;
+ 	struct mv88e6xxx_port_hwtstamp *ps = &chip->port_hwtstamp[port];
+ 
+-	if (!chip->info->ptp_support)
++	if (!chip->info->ptp_support || !chip->ptp_clock)
+ 		return -EOPNOTSUPP;
+ 
+ 	*config = ps->tstamp_config;
+@@ -213,7 +213,7 @@ static struct ptp_header *mv88e6xxx_should_tstamp(struct mv88e6xxx_chip *chip,
+ 	struct mv88e6xxx_port_hwtstamp *ps = &chip->port_hwtstamp[port];
+ 	struct ptp_header *hdr;
+ 
+-	if (!chip->info->ptp_support)
++	if (!chip->info->ptp_support || !chip->ptp_clock)
+ 		return NULL;
+ 
+ 	hdr = ptp_parse_header(skb, type);
+-- 
+2.48.1
+

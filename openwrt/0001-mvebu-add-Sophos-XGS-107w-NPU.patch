@@ -41,10 +41,10 @@ index 9d0f6d5..11b8f3d 100644
  	;;
 diff --git a/target/linux/mvebu/files/arch/arm64/boot/dts/marvell/cn9130-sophos-xgs107w.dts b/target/linux/mvebu/files/arch/arm64/boot/dts/marvell/cn9130-sophos-xgs107w.dts
 new file mode 100644
-index 0000000..bc327ec
+index 0000000..d62b7da
 --- /dev/null
 +++ b/target/linux/mvebu/files/arch/arm64/boot/dts/marvell/cn9130-sophos-xgs107w.dts
-@@ -0,0 +1,233 @@
+@@ -0,0 +1,231 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
 + * Sophos XGS 87(w) / 107(w) — NPU complex: Marvell CN9130 + 88E6193X.
@@ -202,8 +202,6 @@ index 0000000..bc327ec
 +
 +	switch@2 {
 +		compatible = "marvell,mv88e6190";
-+		#address-cells = <1>;
-+		#size-cells = <0>;
 +		reg = <2>;
 +		/*
 +		 * The switch reset line is CP GPIO2 pin 17 (stock U-Boot

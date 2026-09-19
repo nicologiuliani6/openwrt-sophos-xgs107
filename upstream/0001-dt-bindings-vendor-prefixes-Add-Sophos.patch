@@ -1,0 +1,29 @@
+From 97ce63d371b2f5efa3a21fd9136c6046e71b04eb Mon Sep 17 00:00:00 2001
+From: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
+Date: Sat, 19 Sep 2026 09:22:53 +0200
+Subject: [PATCH 1/4] dt-bindings: vendor-prefixes: Add Sophos
+
+Add the vendor prefix for Sophos Ltd., which makes the XGS series of
+firewall appliances.
+
+Assisted-by: Claude:claude-sonnet-5
+---
+ Documentation/devicetree/bindings/vendor-prefixes.yaml | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/vendor-prefixes.yaml b/Documentation/devicetree/bindings/vendor-prefixes.yaml
+index a9cf85f..f5a0724 100644
+--- a/Documentation/devicetree/bindings/vendor-prefixes.yaml
++++ b/Documentation/devicetree/bindings/vendor-prefixes.yaml
+@@ -1509,6 +1509,8 @@ patternProperties:
+     description: Sony Corporation
+   "^sophgo,.*":
+     description: Sophgo Technology Inc.
++  "^sophos,.*":
++    description: Sophos Ltd.
+   "^sourceparts,.*":
+     description: Source Parts Inc.
+   "^spacemit,.*":
+-- 
+2.48.1
+

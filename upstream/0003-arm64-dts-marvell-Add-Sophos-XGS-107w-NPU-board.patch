@@ -1,0 +1,279 @@
+From 4dd3d1c32edcc244c5a9c1ef0911a251ab853664 Mon Sep 17 00:00:00 2001
+From: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
+Date: Sat, 19 Sep 2026 09:23:35 +0200
+Subject: [PATCH 3/4] arm64: dts: marvell: Add Sophos XGS 107w NPU board
+
+The Sophos XGS 87/107 desktop firewalls pair an AMD x86 host with a
+separate network processing unit: an Armada CN9130 SoC with its own
+eMMC, SPI NOR and a Marvell 88E6193X switch on the SoC's MDIO bus. The
+switch's port 0 is a 10G link to the SoC's first mvpp2 port, ports 1-8
+are the front-panel RJ45 ports through the switch's internal PHYs, and
+port 9 is the SFP cage.
+
+Describe that hardware: the UART, the 8 GB eMMC, the SPI NOR holding
+U-Boot (read-only), the two PCA9555 GPIO expanders, the SFP cage, and
+the switch with its ports.
+
+The switch reset line (CP GPIO2 pin 17) is not given to the driver as
+reset-gpios: the 88E6193X needs about two seconds after reset, far more
+than the driver waits, and the probe would time out. The boot loader
+resets it before starting the kernel.
+
+Assisted-by: Claude:claude-opus-5
+---
+ arch/arm64/boot/dts/marvell/Makefile          |   1 +
+ .../dts/marvell/cn9130-sophos-xgs107w.dts     | 231 ++++++++++++++++++
+ 2 files changed, 232 insertions(+)
+ create mode 100644 arch/arm64/boot/dts/marvell/cn9130-sophos-xgs107w.dts
+
+diff --git a/arch/arm64/boot/dts/marvell/Makefile b/arch/arm64/boot/dts/marvell/Makefile
+index a774bc7..800f111 100644
+--- a/arch/arm64/boot/dts/marvell/Makefile
++++ b/arch/arm64/boot/dts/marvell/Makefile
+@@ -33,5 +33,6 @@ dtb-$(CONFIG_ARCH_MVEBU) += cn9130-cf-base.dtb
+ dtb-$(CONFIG_ARCH_MVEBU) += cn9130-cf-pro.dtb
+ dtb-$(CONFIG_ARCH_MVEBU) += cn9131-cf-solidwan.dtb
+ dtb-$(CONFIG_ARCH_MVEBU) += cn9132-clearfog.dtb
++dtb-$(CONFIG_ARCH_MVEBU) += cn9130-sophos-xgs107w.dtb
+ 
+ subdir-y	+= mmp
+diff --git a/arch/arm64/boot/dts/marvell/cn9130-sophos-xgs107w.dts b/arch/arm64/boot/dts/marvell/cn9130-sophos-xgs107w.dts
+new file mode 100644
+index 0000000..d62b7da
+--- /dev/null
++++ b/arch/arm64/boot/dts/marvell/cn9130-sophos-xgs107w.dts
+@@ -0,0 +1,231 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Sophos XGS 87(w) / 107(w) — NPU complex: Marvell CN9130 + 88E6193X.
++ *
++ * Derived from the stock "Marvell CN9130 Senao XGS board" device tree
++ * (cn9130-senao-xgs.dtb, SFOS 19.5.4) and SFOS's xgs-platform port map.
++ * See docs/hardware-architecture.md.
++ *
++ * The x86 host on the same board is not described here: the CN9130 is a
++ * PCIe endpoint towards it, and endpoint mode is not used by this DT.
++ */
++
++/dts-v1/;
++
++#include "cn9130.dtsi"
++#include <dt-bindings/gpio/gpio.h>
++
++/ {
++	model = "Sophos XGS 107w (CN9130 NPU)";
++	compatible = "sophos,xgs107w-npu", "marvell,cn9130",
++		     "marvell,armada-ap807-quad", "marvell,armada-ap807";
++
++	chosen {
++		stdout-path = "serial0:115200n8";
++	};
++
++	aliases {
++		ethernet0 = &cp0_eth0;
++		i2c0 = &cp0_i2c0;
++		i2c1 = &cp0_i2c1;
++		spi0 = &cp0_spi0;
++	};
++
++	memory@0 {
++		device_type = "memory";
++		reg = <0x0 0x0 0x0 0x80000000>;
++	};
++
++	reserved-memory {
++		/* OP-TEE, as reserved by the stock firmware (TF-A 10.22.06) */
++		tee@4400000 {
++			reg = <0x0 0x4400000 0x0 0x1000000>;
++			no-map;
++		};
++	};
++
++	/* Front-panel SFP "F1", wired to 88E6193X port 9 */
++	sfp: sfp {
++		compatible = "sff,sfp";
++		i2c-bus = <&cp0_i2c1>;
++		los-gpios = <&cp0_gpio1 1 GPIO_ACTIVE_HIGH>;
++		tx-fault-gpios = <&cp0_gpio1 2 GPIO_ACTIVE_HIGH>;
++		mod-def0-gpios = <&cp0_gpio1 3 GPIO_ACTIVE_LOW>;
++		tx-disable-gpios = <&cp0_gpio1 7 GPIO_ACTIVE_HIGH>;
++		maximum-power-milliwatt = <2000>;
++	};
++};
++
++&uart0 {
++	status = "okay";
++};
++
++/* 8 GB eMMC on the AP */
++&ap_sdhci0 {
++	bus-width = <8>;
++	non-removable;
++	mmc-ddr-1_8v;
++	status = "okay";
++};
++
++/*
++ * MPP muxing is left as set up by the stock U-Boot: no pin groups are
++ * claimed here, the controller only exists for the GPIO banks.
++ */
++&cp0_syscon0 {
++	cp0_pinctrl: pinctrl {
++		compatible = "marvell,cp115-standalone-pinctrl";
++	};
++};
++
++&cp0_gpio1 {
++	status = "okay";
++};
++
++&cp0_gpio2 {
++	status = "okay";
++};
++
++&cp0_i2c0 {
++	clock-frequency = <100000>;
++	status = "okay";
++
++	/* Port speed LEDs (xgs-platform "gpio:3:*") */
++	led_gpio: gpio@20 {
++		compatible = "nxp,pca9555";
++		reg = <0x20>;
++		gpio-controller;
++		#gpio-cells = <2>;
++	};
++};
++
++&cp0_i2c1 {
++	/* SFP EEPROM (0x50/0x51) */
++	clock-frequency = <100000>;
++	status = "okay";
++};
++
++/*
++ * 4 MB SPI NOR: stock U-Boot + env. Read-only on purpose.
++ * The stock DT calls this controller (0x700600) "cell-index 1", but in
++ * mainline it is cp0_spi0.
++ */
++&cp0_spi0 {
++	status = "okay";
++
++	flash@0 {
++		compatible = "jedec,spi-nor";
++		reg = <0>;
++		spi-max-frequency = <40000000>;
++
++		partitions {
++			compatible = "fixed-partitions";
++			#address-cells = <1>;
++			#size-cells = <1>;
++
++			partition@0 {
++				label = "u-boot";
++				reg = <0x0 0x3f0000>;
++				read-only;
++			};
++
++			partition@3f0000 {
++				label = "u-boot-env";
++				reg = <0x3f0000 0x10000>;
++				read-only;
++			};
++		};
++	};
++};
++
++&cp0_ethernet {
++	status = "okay";
++};
++
++/* 10G link to 88E6193X port 0, comphy lane 4 */
++&cp0_eth0 {
++	status = "okay";
++	phy-mode = "10gbase-r";
++	phys = <&cp0_comphy4 0>;
++	managed = "in-band-status";
++};
++
++&cp0_mdio {
++	status = "okay";
++
++	switch@2 {
++		compatible = "marvell,mv88e6190";
++		reg = <2>;
++		/*
++		 * The switch reset line is CP GPIO2 pin 17 (stock U-Boot
++		 * "sw_init_p0: gpio clear C17 … gpio set C17"; U-Boot names the
++		 * banks A = AP, B = CP gpio1, C = CP gpio2). It is deliberately
++		 * not given to the driver as reset-gpios: after reset the 6193X
++		 * needs far longer than mv88e6xxx's 10 ms + 50 ms poll (stock
++		 * waits 2 s), and probing times out with -ETIMEDOUT. The reset
++		 * is done by whatever starts this kernel (bootloader or kexec
++		 * wrapper) instead.
++		 */
++
++		ports {
++			#address-cells = <1>;
++			#size-cells = <0>;
++
++			port@0 {
++				reg = <0>;
++				label = "cpu";
++				ethernet = <&cp0_eth0>;
++				phy-mode = "10gbase-r";
++				managed = "in-band-status";
++			};
++
++			port@1 {
++				reg = <1>;
++				label = "p1";
++			};
++
++			port@2 {
++				reg = <2>;
++				label = "p2";
++			};
++
++			port@3 {
++				reg = <3>;
++				label = "p3";
++			};
++
++			port@4 {
++				reg = <4>;
++				label = "p4";
++			};
++
++			port@5 {
++				reg = <5>;
++				label = "p5";
++			};
++
++			port@6 {
++				reg = <6>;
++				label = "p6";
++			};
++
++			port@7 {
++				reg = <7>;
++				label = "p7";
++			};
++
++			port@8 {
++				reg = <8>;
++				label = "p8";
++			};
++
++			port@9 {
++				reg = <9>;
++				label = "sfp";
++				phy-mode = "1000base-x";
++				managed = "in-band-status";
++				sfp = <&sfp>;
++			};
++		};
++	};
++};
+-- 
+2.48.1
+

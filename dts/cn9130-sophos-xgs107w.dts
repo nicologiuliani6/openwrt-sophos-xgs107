@@ -155,8 +155,6 @@
 
 	switch@2 {
 		compatible = "marvell,mv88e6190";
-		#address-cells = <1>;
-		#size-cells = <0>;
 		reg = <2>;
 		/*
 		 * The switch reset line is CP GPIO2 pin 17 (stock U-Boot
