@@ -126,12 +126,14 @@ index 0000000..84830bf
 +}
 diff --git a/target/linux/mvebu/cortexa72/base-files/etc/uci-defaults/90-vntb b/target/linux/mvebu/cortexa72/base-files/etc/uci-defaults/90-vntb
 new file mode 100755
-index 0000000..f03ec6c
+index 0000000..a5cd434
 --- /dev/null
 +++ b/target/linux/mvebu/cortexa72/base-files/etc/uci-defaults/90-vntb
-@@ -0,0 +1,3 @@
+@@ -0,0 +1,5 @@
 +#!/bin/sh
 +/etc/init.d/vntb enable
++# 2 KB transport frames: the default 64 KB gives a 1 MB window only 15 slots (12 Mbit/s)
++sed -i 's/^ntb_transport$/ntb_transport transport_mtu=2048/' /etc/modules.d/ntb-netdev
 +exit 0
 diff --git a/target/linux/mvebu/cortexa72/base-files/usr/share/luci/menu.d/luci-mod-x86-module.json b/target/linux/mvebu/cortexa72/base-files/usr/share/luci/menu.d/luci-mod-x86-module.json
 new file mode 100644
@@ -198,10 +200,10 @@ index 0000000..e7364cc
 +	handleReset: null
 +});
 diff --git a/target/linux/mvebu/cortexa72/config-6.18 b/target/linux/mvebu/cortexa72/config-6.18
-index 13507bc..6be9855 100644
+index 13507bc..ef12774 100644
 --- a/target/linux/mvebu/cortexa72/config-6.18
 +++ b/target/linux/mvebu/cortexa72/config-6.18
-@@ -127,3 +127,26 @@ CONFIG_TRACE_IRQFLAGS_NMI_SUPPORT=y
+@@ -127,3 +127,29 @@ CONFIG_TRACE_IRQFLAGS_NMI_SUPPORT=y
  CONFIG_UNMAP_KERNEL_AT_EL0=y
  CONFIG_VMAP_STACK=y
  CONFIG_ZONE_DMA32=y
@@ -228,6 +230,9 @@ index 13507bc..6be9855 100644
 +# CONFIG_NTB_PINGPONG is not set
 +# CONFIG_NTB_TOOL is not set
 +# CONFIG_NTB_PERF is not set
++# CONFIG_HZ_100 is not set
++CONFIG_HZ_1000=y
++CONFIG_HZ=1000
 diff --git a/target/linux/mvebu/files/arch/arm64/boot/dts/marvell/cn9130-sophos-xgs107w.dts b/target/linux/mvebu/files/arch/arm64/boot/dts/marvell/cn9130-sophos-xgs107w.dts
 new file mode 100644
 index 0000000..85548d1
@@ -855,3 +860,28 @@ index 0000000..99e6dde
 + 	SET_NETDEV_DEV(ndev, client_dev);
 + 
 + 	dev = netdev_priv(ndev);
+diff --git a/target/linux/mvebu/patches-6.18/954-pci-epf-vntb-poll-1ms.patch b/target/linux/mvebu/patches-6.18/954-pci-epf-vntb-poll-1ms.patch
+new file mode 100644
+index 0000000..0049593
+--- /dev/null
++++ b/target/linux/mvebu/patches-6.18/954-pci-epf-vntb-poll-1ms.patch
+@@ -0,0 +1,19 @@
++From: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
++Subject: [PATCH] PCI: endpoint: pci-epf-vntb: poll the host commands and doorbells every 1 ms
++
++The host has no way to interrupt the endpoint here, so doorbells are found by
++polling. With HZ=100 the 5 ms period rounds up to a whole tick (10 ms) and
++caps a bulk transfer at a few Mbit/s.
++
++---
++--- a/drivers/pci/endpoint/functions/pci-epf-vntb.c
+++++ b/drivers/pci/endpoint/functions/pci-epf-vntb.c
++@@ -319,7 +319,7 @@
++ 
++ reset_handler:
++ 	queue_delayed_work(kpcintb_workqueue, &ntb->cmd_handler,
++-			   msecs_to_jiffies(5));
+++			   msecs_to_jiffies(1));
++ }
++ 
++ /**
