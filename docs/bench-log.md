@@ -375,6 +375,35 @@ Second boot (patched), all checked over the NPU console and from the PC:
   overwrites a Sophos slot, although that slot is fully backed up). The
   unit was left on **stock** firmware, with p1 untouched.
 
+### 17. eMMC install executed (2026-09-19 ~04:00)
+
+`scripts/82-install-openwrt.sh`, run after the user added a permission
+rule for it:
+1. Checks passed (NPU on stock, p1 not mounted).
+2. p1 written and **verified on the NPU** (sha256 `74f62111…`).
+3. U-Boot env applied with `fw_setenv -s`:
+   `bootcmd=run bootcmd_owrt; run bootcmd_stock`, plus
+   `bootcmd_owrt`/`bootcmd_stock`/`bootargs_owrt` as in
+   [openwrt-install.md](openwrt-install.md). Read back OK.
+4. **Reboot failed silently**: the stock NPU userland has no `reboot`
+   binary (exit 127). The script's "OpenWrt is up" was a **false
+   positive**: SFOS still answered on the same WAN MAC. Both issues are
+   fixed in the script. It now reboots with `/proc/sysrq-trigger` and waits
+   for SFOS's address to go away before looking for OpenWrt.
+5. Rebooted by hand with `sync; echo s/b > /proc/sysrq-trigger`. SFOS on
+   the x86 then crashed as usual, but **this time did not come back**: the
+   x86 console stayed silent, so the x86 needs a power cycle.
+6. **OpenWrt came up from eMMC.** The WAN MAC `…:63` now holds
+   **192.168.88.155**, the lease the router gives OpenWrt (SFOS holds .157),
+   and answers ping. With SFOS dead and no kexec possible, this can only be
+   U-Boot → `bootcmd_owrt` → OpenWrt from p1.
+
+Not yet verified from inside OpenWrt: the NPU console path runs through the
+hung x86, and WAN input is firewalled. After a power cycle:
+- connect a PC to panel port 1 and open http://192.168.1.1;
+- or read the NPU console via x86 `ttyS2` once SFOS is back (it will be
+  in failsafe, NPU unreachable = reason 1, no reflash).
+
 ---
 
 ## Open questions after session 1

@@ -49,7 +49,8 @@ The x86 (and its Wi-Fi) is a later, optional phase.
 - mainline Linux and **OpenWrt run on the CN9130** (booted from RAM with
   kexec), with all 8 ports + SFP via DSA;
 - WAN DHCP works and gigabit line rate is measured (941 Mbit/s);
-- the eMMC install is prepared but not yet executed.
+- **OpenWrt is installed on the NPU eMMC** (slot p1) and boots from the stock
+  U-Boot (2026-09-19). Stock Sophos stays as the U-Boot fallback.
 
 Details: [docs/bench-log.md](docs/bench-log.md) §11-16,
 [openwrt/](openwrt/), [docs/openwrt-install.md](docs/openwrt-install.md).

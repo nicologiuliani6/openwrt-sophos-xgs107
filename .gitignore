@@ -21,3 +21,6 @@ dumps/
 # Raw console captures stay local: they contain the unit's serial number,
 # MACs and network config
 logs/*.log
+
+# Claude Code personal settings
+.claude/settings.local.json

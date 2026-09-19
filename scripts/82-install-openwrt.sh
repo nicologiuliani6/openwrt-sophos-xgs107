@@ -41,11 +41,15 @@ send "curl -sS http://$PC_IP:8001/81-uboot-env-openwrt.txt | xgs-ssh.sh \"cat > 
 send 'timeout 20 xgs-ssh.sh "fw_printenv -n bootcmd"' 20 | grep -q 'run bootcmd_owrt; run bootcmd_stock' || die "env not applied"
 
 echo "== 5/5 rebooting the NPU into OpenWrt (SFOS on the x86 will crash and reboot)"
-send 'xgs-ssh.sh "sync; reboot" </dev/null >/dev/null 2>&1 &' 3 >/dev/null
+# the stock NPU userland has no reboot binary: use SysRq
+send 'xgs-ssh.sh "sync; echo s > /proc/sysrq-trigger; sleep 1; echo b > /proc/sysrq-trigger" </dev/null >/dev/null 2>&1 &' 3 >/dev/null
 kill $SRV 2>/dev/null
 
-# SFOS answered on this same MAC until the NPU went down: give it time to go
-sleep 120
+# SFOS answers on this same MAC (and its own DHCP lease) until the NPU goes
+# down, so first wait for that address to disappear.
+old=$(ip neigh | awk 'tolower($5)=="c8:4f:86:c6:2c:63" && $1 !~ /:/ {print $1; exit}')
+while [ -n "$old" ] && ping -c1 -W1 "$old" >/dev/null 2>&1; do sleep 3; done
+ip neigh flush dev "$(ip route get "$PC_IP" 2>/dev/null | awk '{print $3; exit}')" >/dev/null 2>&1 || true
 echo "   waiting for OpenWrt WAN (Port2, MAC c8:4f:86:c6:2c:63) on the LAN..."
 for i in $(seq 1 60); do
 	for h in $(seq 1 254); do ping -c1 -W1 "${PC_IP%.*}.$h" >/dev/null 2>&1 & done; wait
