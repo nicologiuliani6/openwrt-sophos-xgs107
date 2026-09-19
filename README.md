@@ -44,3 +44,36 @@ install, never let SFOS boot on the x86: it erases the OpenWrt root.
 [Troubleshooting](docs/troubleshooting.md) ·
 [Architecture](docs/architecture.md) · [Hardware](docs/hardware.md) ·
 [NPU–x86 link](docs/npu-x86-link.md) · [Upstreaming](docs/upstreaming.md)
+
+## Who did what
+
+**Human (owner):** obtained the hardware; all physical work (opening the
+unit, wiring the serial adapters, cabling, power cycles, reading LEDs and
+ports); reset the SFOS password; chose the goals (drop SFOS, keep stock as
+fallback, x86 on OpenWrt, upstream the patches); authorised every write to
+the device; reviews and sends the upstream patches.
+
+**AI (Claude):** everything else: reading the hardware from a live unit,
+reverse engineering of the stock system, the device tree, kernel patches,
+init and installer scripts, build system, the PCIe endpoint link, the
+documentation, and the patch review. The AI ran the commands on the device
+under the owner's standing permission.
+
+## Code provenance
+
+| | Status |
+|---|---|
+| Unmodified upstream code: Linux mainline drivers (`mv88e6xxx`, `mvpp2`, DesignWare endpoint, `pci-epf-vntb`, `ntb_*`, `ath10k`), OpenWrt, LuCI, stock U-Boot | widely used and tested by others |
+| Written by the AI and run on the one reference unit, not in production: the device tree, kernel patches 950–954, NPU/x86 link scripts, `install-x86.sh` and `install-npu.sh` (earlier versions of them ran; the current rewrite was not re-run), `x86-mbr.py`, console tools | works on that unit, never in the field |
+| Written by the AI, never run on hardware: `install.sh`, `backup-stock.sh`, `--serial` mode, the from-scratch `build/build.sh` pipeline (being verified), USB and LED configuration | untested |
+| Upstream patches (`upstream/`) | compiled and schema-checked; the DTS boots on the unit; not yet reviewed by maintainers |
+
+Expect bugs. Do not use it for anything you cannot re-flash.
+
+## AI usage
+
+Model: Claude (Opus 5 for the first part, then Sonnet 5), through Claude Code,
+over a multi-day session plus several helper agents. Token count and cost were
+not recorded by the tool: the session processed on the order of tens of
+millions of tokens, mostly cached context re-reads (an estimate, not a
+measurement). Exact figures: the owner's Claude usage page.
