@@ -4,20 +4,27 @@ Goal: both modules of a stock XGS 107w (SFOS) end up running OpenWrt, with
 the stock Sophos slot still bootable on the NPU as a fallback.
 
 **Time:** about 30 minutes with a prebuilt `dist/`, plus the backup
-(25 minutes for the full eMMC) and, if you build from source, an hour or two.
+(25 minutes for the full eMMC) and, if the images have to be built, an hour or
+two.
 
 **You need**
 
 - the appliance, powered, with a network cable between **panel port 2**
   (WAN) or any port and the PC (or a router the PC is on): the x86's only
   network under SFOS is through the NPU;
-- a PC (Linux) on that network, with `python3`, `curl`, `git`;
+- a PC (Linux) on that network, with `python3`, `curl`, `git` and, for the
+  build, the packages of [build.md](build.md). Its firewall must let the
+  appliance reach TCP ports 8000 (and 8001 for the backup);
 - the x86 console: micro-USB cable to the PL2303 port (38400 8N1) or the RJ45
-  console. Any terminal works (`picocom -b 38400 /dev/serial/by-id/usb-Prolific*`);
+  console. Any terminal works (`picocom -b 38400 /dev/serial/by-id/usb-Prolific*`).
+  For `./install.sh --serial` your user must be in the `dialout` group
+  (`sudo usermod -aG dialout $USER`, log in again); another device:
+  `XGS_CONSOLE=/dev/ttyUSB1 ./install.sh --serial`;
 - the SFOS admin password (you set it during the first setup; if lost, see
   [recovery.md](recovery.md));
-- `dist/` with the installers and images: build it ([build.md](build.md))
-  or unpack a release into `dist/`.
+- `dist/` with the installers and images: `./install.sh` builds it for you
+  the first time ([build.md](build.md); an hour or two, and 30 GB of disk per
+  target), or copy a finished `dist/` into the repository.
 
 **What is written**
 
@@ -31,7 +38,9 @@ the stock Sophos slot still bootable on the NPU as a fallback.
 
 ## 1. Back up (once, before anything)
 
-See [backup.md](backup.md). Do not skip the SPI U-Boot and the eMMC.
+See [backup.md](backup.md); it works before anything is built. Do not skip
+the SPI U-Boot and the eMMC. `./install.sh` looks for
+`dumps/npu/mtd0-uboot.bin` and asks before going on without it.
 
 ## 2. The one-command path
 
@@ -41,12 +50,16 @@ On the PC, in the repository:
 ./install.sh
 ```
 
-It checks the prerequisites, builds or reuses `dist/`, starts the HTTP
+It builds or reuses `dist/`, asks if there is no backup, starts the HTTP
 server and shows the two commands to run on the appliance with your PC's
-address already filled in. Open the SFOS advanced shell on the x86 console
+address already filled in (`--pc-ip` if it guesses the wrong one, `--port`
+if 8000 is taken). Open the SFOS advanced shell on the x86 console
 first (log in as `admin`, menu **5** *Device Management*, then **3**
 *Advanced Shell*), then either paste the commands or let the script type them
-(`./install.sh --serial`, it drives the console for you).
+(`./install.sh --serial`, it drives the console for you and shows the
+appliance's output as it comes; the console session is also logged in
+`logs/`). Before that, check from the advanced shell that the appliance reaches
+the PC: `curl -sI http://PC:8000/`.
 
 ## 3. What the two commands do (manual path)
 
@@ -89,7 +102,8 @@ Checks: `ping 192.168.1.1`, `ping 192.168.1.2`; on the NPU `ip link` shows
 ## If something goes wrong
 
 - **The installer aborts**: nothing beyond the failed step was written;
-  read the message, fix, run again (all steps are idempotent).
+  read the message, fix, run `./install.sh` again (all steps are idempotent).
+  [troubleshooting.md](troubleshooting.md) lists the messages.
 - **The NPU does not come up on OpenWrt**: U-Boot falls back to stock by
   itself if the kernel cannot be loaded; otherwise [recovery.md](recovery.md).
 - **The x86 shows GRUB and boots SFOS**: choose the `OpenWrt` entry (and see

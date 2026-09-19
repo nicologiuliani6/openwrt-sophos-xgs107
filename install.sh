@@ -9,6 +9,8 @@
 # Options: --pc-ip <ip>   address the appliance can reach this PC at
 #          --port <n>     HTTP port (default 8000)
 #          --yes          do not ask about the missing backup
+# Environment: XGS_CONSOLE=/dev/ttyUSB1   serial device for --serial
+#              (default: the Prolific PL2303 in /dev/serial/by-id)
 #
 # Before: open the SFOS advanced shell on the x86 console (login admin,
 # menu 5 Device Management, then 3 Advanced Shell). Read docs/install.md.
@@ -23,10 +25,10 @@ YES=
 while [ $# -gt 0 ]; do
 	case $1 in
 	--serial) SERIAL=1 ;;
-	--pc-ip) PC_IP=$2; shift ;;
-	--port) PORT=$2; shift ;;
+	--pc-ip) PC_IP=${2:?--pc-ip needs an address}; shift ;;
+	--port) PORT=${2:?--port needs a number}; shift ;;
 	--yes) YES=1 ;;
-	-h|--help) sed -n '2,15p' "$0"; exit 0 ;;
+	-h|--help) sed -n '2,16p' "$0"; exit 0 ;;
 	*) echo "unknown option $1 (try --help)" >&2; exit 2 ;;
 	esac
 	shift
@@ -38,7 +40,10 @@ die() { echo "ABORT: $*" >&2; exit 1; }
 for t in python3 curl sha256sum; do command -v $t >/dev/null || die "need $t"; done
 
 say "1/4 installation files"
-if [ -f "$DIST/SHA256SUMS" ] && (cd "$DIST" && sha256sum -c --quiet SHA256SUMS 2>/dev/null); then
+NEED="npu-p1.img.gz npu-p1.md5 npu-p1.sha256 x86-vmlinuz x86-rootfs.img.gz x86-env.sh install-x86.sh install-npu.sh x86-mbr.py uboot-env.txt"
+complete=1
+for f in $NEED; do [ -f "$DIST/$f" ] || complete=; done
+if [ -n "$complete" ] && [ -f "$DIST/SHA256SUMS" ] && (cd "$DIST" && sha256sum -c --quiet SHA256SUMS 2>/dev/null); then
 	echo "using $DIST (checksums OK)"
 else
 	echo "no complete dist/: building it (an hour or two the first time, see docs/build.md)"
@@ -63,11 +68,13 @@ fi
 echo "the appliance will fetch from http://$PC_IP:$PORT (change with --pc-ip)"
 
 LOG=$(mktemp)
+OUT=$(mktemp)
 (cd "$DIST" && exec python3 -m http.server "$PORT" > "$LOG" 2>&1) &
 SRV=$!
-trap 'kill $SRV 2>/dev/null; rm -f "$LOG"' EXIT INT TERM
+trap 'kill $SRV 2>/dev/null; rm -f "$LOG" "$OUT"' EXIT
+trap 'exit 130' INT TERM
 sleep 1
-kill -0 $SRV 2>/dev/null || die "cannot serve on port $PORT (in use?)"
+kill -0 $SRV 2>/dev/null || { cat "$LOG" >&2; die "cannot serve on port $PORT (in use?)"; }
 
 X86="curl -fsS http://$PC_IP:$PORT/install-x86.sh -o /dev/shm/i.sh && PC=$PC_IP PORT=$PORT sh /dev/shm/i.sh"
 NPU="curl -fsS http://$PC_IP:$PORT/install-npu.sh -o /dev/shm/n.sh && PC=$PC_IP PORT=$PORT sh /dev/shm/n.sh"
@@ -76,9 +83,10 @@ say "4/4 install (in this order)"
 if [ -n "$SERIAL" ]; then
 	for step in "$X86" "$NPU"; do
 		echo ">> $step"
-		out=$(printf '%s\n' "$step" | python3 "$REPO/tools/console-send.py" --name install --idle 120) || true
-		echo "$out" | tail -n 12
-		echo "$out" | grep -q 'DONE' || die "the step did not report DONE: read the output above, fix, run ./install.sh --serial again"
+		printf '%s\n' "$step" |
+			python3 "$REPO/tools/console-send.py" --name install --live --idle 600 --until '\[install(-npu)?\] (DONE|ABORT)' |
+			tee "$OUT" || die "cannot drive the console (see above)"
+		grep -Eq '\[install(-npu)?\] DONE' "$OUT" || die "the step did not report DONE: read the output above, fix, run ./install.sh --serial again"
 	done
 else
 	cat <<EOT

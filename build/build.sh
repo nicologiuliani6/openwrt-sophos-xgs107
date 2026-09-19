@@ -25,6 +25,7 @@ JOBS=${JOBS:-$(nproc)}
 DIST_DIR=${DIST_DIR:-$REPO/dist}
 
 case $WHAT in npu|x86|all) ;; *) echo "usage: $0 [npu|x86|all]" >&2; exit 2 ;; esac
+[ "$(id -u)" -ne 0 ] || { echo "do not build as root (OpenWrt refuses to)" >&2; exit 1; }
 command -v git >/dev/null && command -v make >/dev/null && command -v python3 >/dev/null ||
 	{ echo "need git, make, gcc, python3 (see docs/build.md for the full list)" >&2; exit 1; }
 
@@ -42,7 +43,8 @@ build() {
 	echo "==== $target ===="
 	"$REPO/openwrt/apply.sh" "$OPENWRT_DIR" "$target"
 	cd "$OPENWRT_DIR"
-	[ -n "${DL_DIR:-}" ] && ln -sfn "$DL_DIR" dl
+	if [ -n "${DL_DIR:-}" ] && { [ -L dl ] || [ ! -e dl ]; }; then ln -sfn "$DL_DIR" dl; fi
+	cp "$REPO/build/feeds.conf" feeds.conf	# the feed commits the images were built with
 	./scripts/feeds update -a >/dev/null
 	./scripts/feeds install -a >/dev/null
 	cp "$REPO/build/config/$target.config" .config

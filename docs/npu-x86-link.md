@@ -69,7 +69,7 @@ Internet through the NPU; its LuCI and SSH are reachable from any LAN port.
 ## Getting files onto the x86 before it had a network
 
 `tools/console-put.py LOCAL /tmp/REMOTE` copies a file over the x86's serial
-console (its busybox has no `base64` or `stty`): 110-byte chunks written
+console (its busybox has no `base64` or `stty`): 48-byte chunks written
 with `echo -ne '\x..'`, each verified with `md5sum` and resent if wrong,
-about 13 KB/s. It brought the first NTB modules over; after that everything
+about 1.5 KB/s. It brought the first NTB modules over; after that everything
 went through the link.

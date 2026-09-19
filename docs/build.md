@@ -28,7 +28,8 @@ mirror is much faster), `JOBS`, `DL_DIR` (shared download cache), `DIST_DIR`.
      page, defaults) and the NPU kernel patches;
    - `openwrt/x86/`: the x86 kernel patches and, for the x86 build only, the
      root filesystem overlay (network defaults, the NTB link supervisor).
-3. Updates the feeds, copies `build/config/<target>.config` to `.config`,
+3. Updates the feeds (pinned to the commits of `build/feeds.conf`, so the
+   package set does not drift), copies `build/config/<target>.config` to `.config`,
    `make defconfig`, `make`.
 4. Collects the artifacts and checksums into `dist/`.
 

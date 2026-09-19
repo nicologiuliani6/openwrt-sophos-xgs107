@@ -105,7 +105,7 @@ board RXD goes to adapter TXD, board TXD to adapter RXD.
 **Still verify with a multimeter before connecting.** This pinout comes
 from one unit of one model; board revisions differ, and a mis-connection
 can kill the switch ASIC. Procedure:
-[npu-com-serial-checklist.md](../history/npu-com-header-checklist.md).
+[npu-com-header-checklist.md](../history/npu-com-header-checklist.md).
 
 Practical note from the thread: a fair amount of the difficulty turned out
 to be a **broken jumper wire**, not the pinout. Continuity-test the cables

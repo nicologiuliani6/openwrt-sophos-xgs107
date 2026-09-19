@@ -38,6 +38,9 @@ if (ents[0][4], ents[0][5]) != (sysfs(6, 'start'), sysfs(6, 'size')):
     die('MBR entry 1 does not match sda6 (the boot partition)')
 if (ents[1][4], ents[1][5]) != (sysfs(7, 'start'), sysfs(7, 'size')):
     die('MBR entry 2 does not match sda7')
+if ents[2][2] == 0x83 and (ents[2][4], ents[2][5]) == (start, size) and not any(mbr[446 + 48:446 + 64]):
+    print('MBR entry 3 already describes sda8: nothing to do')
+    sys.exit(0)
 if any(mbr[446 + 32:446 + 64]):
     die('MBR entries 3 and 4 are not empty')
 if (sysfs(8, 'start'), sysfs(8, 'size')) != (start, size):

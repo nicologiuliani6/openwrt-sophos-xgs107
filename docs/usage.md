@@ -15,10 +15,8 @@ Web interfaces (LuCI), user `root`, **no password until you set one**
 - <http://192.168.1.1> – the router: interfaces, firewall, DHCP, USB, LEDs.
   *Network → Wi-Fi / x86 module* links to the x86's wireless page.
 - <http://192.168.1.2> – the x86: **Wi-Fi**, and its own status. SSH is on
-  both. Under *Network → Wireless* the radio (`radio0`, QCA988x, 5 GHz
-  channel 36, VHT80, country IT) is present and up.
-
-Neither system has a root password until you set one.
+  both. Under *Network → Wireless* the radio (`radio0`, QCA988x, 5 GHz,
+  channel 36, VHT80, no country set) is present; its interface is disabled.
 
 ## Wi-Fi
 
@@ -27,7 +25,8 @@ The access point is defined but **disabled and open**, on purpose. On
 interface: set the SSID, *Encryption* (WPA2-PSK or WPA3-SAE), the key, and
 *Enable*. Save & Apply. The access point is bridged to `lan`, so clients get
 their address from the NPU and reach every port. Set the country code that
-matches where you are (it defaults to IT).
+matches where you are (none is set by default, so only the world-safe
+channels and power are allowed).
 
 Or, from a shell on the x86:
 

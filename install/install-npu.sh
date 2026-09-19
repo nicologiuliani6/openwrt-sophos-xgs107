@@ -35,7 +35,7 @@ say "checking the NPU"
 [ "$(npu 'uname -r' | cut -c1-4)" = 4.14 ] || die "the NPU is not running the stock Linux 4.14"
 npu 'grep -q root=/dev/mmcblk0p3 /proc/cmdline' || die "the NPU did not boot from stock slot p3"
 [ "$(npu 'mount | grep -c mmcblk0p1')" = 0 ] || die "mmcblk0p1 is mounted on the NPU"
-npu 'which fw_setenv fw_printenv sha256sum >/dev/null' || die "fw_setenv / sha256sum missing on the NPU"
+npu 'fw_printenv -n bootcmd >/dev/null && echo x | sha256sum >/dev/null' || die "fw_printenv / sha256sum missing or not working on the NPU"
 
 say "writing mmcblk0p1 (about a minute)"
 zcat p1.img.gz | npu 'dd of=/dev/mmcblk0p1 bs=1M conv=fsync 2>/dev/null; sync'

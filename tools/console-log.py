@@ -8,7 +8,7 @@ Stops early once the SFOS login prompt ("Password:") has been seen.
 import importlib.util, os, sys, time
 
 here = os.path.dirname(os.path.abspath(__file__))
-spec = importlib.util.spec_from_file_location('grub', os.path.join(here, '90-x86-grub.py'))
+spec = importlib.util.spec_from_file_location('grub', os.path.join(here, 'x86-grub.py'))
 g = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(g)
 

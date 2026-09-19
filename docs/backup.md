@@ -7,12 +7,12 @@ overwrite an existing file and prints the sha256 of each stream.
 ```sh
 # PC, in the repository
 python3 tools/dump-receiver.py 8001          # writes into dumps/  (gitignored)
-install/serve.sh                              # second terminal, port 8000
-# x86 SFOS advanced shell
+install/serve.sh                              # second terminal, port 8000; prints the PC's address
+# x86 SFOS advanced shell (PC = the address serve.sh printed; the stock NPU must be running)
 curl -fsS http://PC:8000/backup-stock.sh -o /dev/shm/b.sh && PC=PC PORT=8001 sh /dev/shm/b.sh
 ```
 
-`SKIP_EMMC=1` leaves out the whole-eMMC copy (7.3 GB, about 25 minutes).
+`SKIP_EMMC=1` (put it before `PC=` in the command above) leaves out the whole-eMMC copy (7.3 GB, about 25 minutes).
 Keep at least the SPI U-Boot, its environment and the stock slot p3.
 
 What you get in `dumps/`:
