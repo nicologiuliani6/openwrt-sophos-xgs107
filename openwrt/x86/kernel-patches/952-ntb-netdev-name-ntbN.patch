@@ -1,0 +1,18 @@
+From: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
+Subject: [PATCH] net: ntb_netdev: name the interface ntbN
+
+A board with both an Ethernet MAC and NTB gets an "ethN" whose number
+depends on probe order; a stable ntbN name lets network configuration
+refer to the NTB link.
+
+---
+--- a/drivers/net/ntb_netdev.c
++++ b/drivers/net/ntb_netdev.c
+@@ -488,6 +488,7 @@
+ 	if (!ndev)
+ 		return -ENOMEM;
+ 
++	strscpy(ndev->name, "ntb%d", IFNAMSIZ);
+ 	SET_NETDEV_DEV(ndev, client_dev);
+ 
+ 	dev = netdev_priv(ndev);

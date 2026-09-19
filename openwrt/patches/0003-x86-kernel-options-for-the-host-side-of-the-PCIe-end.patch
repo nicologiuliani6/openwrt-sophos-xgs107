@@ -1,0 +1,32 @@
+From cf90d73ea602019cda3b1503af9fe1dff5b46a28 Mon Sep 17 00:00:00 2001
+From: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
+Date: Sat, 19 Sep 2026 20:13:05 +0200
+Subject: [PATCH 3/3] x86: kernel options for the host side of the PCIe
+ endpoint NTB link
+
+NTB, ntb_transport, ntb_netdev and ntb_hw_epf as modules; the other NTB
+hardware drivers stay off.
+---
+ target/linux/x86/config-6.18 | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/target/linux/x86/config-6.18 b/target/linux/x86/config-6.18
+index 8c9aed9..feb965a 100644
+--- a/target/linux/x86/config-6.18
++++ b/target/linux/x86/config-6.18
+@@ -527,3 +527,12 @@ CONFIG_X86_VMX_FEATURE_NAMES=y
+ CONFIG_XZ_DEC_BCJ=y
+ CONFIG_XZ_DEC_X86=y
+ CONFIG_ZLIB_INFLATE=y
++# CONFIG_NTB_MSI is not set
++# CONFIG_NTB_AMD is not set
++# CONFIG_NTB_IDT is not set
++# CONFIG_NTB_INTEL is not set
++# CONFIG_NTB_SWITCHTEC is not set
++# CONFIG_NTB_PINGPONG is not set
++# CONFIG_NTB_TOOL is not set
++# CONFIG_NTB_PERF is not set
++CONFIG_DRM_CLIENT_DEFAULT_FBDEV=y
+-- 
+2.48.1
+

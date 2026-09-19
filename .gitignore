@@ -1,27 +1,12 @@
-# Out-of-tree kernel build artifacts
-driver/**/*.o
-driver/**/*.ko
-driver/**/*.mod
-driver/**/*.mod.c
-driver/**/.*.cmd
-driver/**/Module.symvers
-driver/**/modules.order
-driver/**/.tmp_versions/
+# Build output and the OpenWrt checkout
+build/openwrt/
+dist/
 
-# Firmware blobs are redistributable but large; re-stage with scripts.
-firmware-refs/mrvl/
-
-# Hardware capture output
-logs/*/
-logs/*.txt
-
-# Device dumps (proprietary Sophos/Marvell binaries) — never commit
+# Device dumps: proprietary Sophos/Marvell binaries, never commit
 dumps/
 
-# Raw console captures stay local: they contain the unit's serial number,
-# MACs and network config
-logs/*.log
+# Raw console captures: they contain the unit's serial number, MACs and network config
+logs/
 
-# Claude Code personal settings
-.claude/settings.local.json
 __pycache__/
+.claude/settings.local.json

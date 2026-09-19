@@ -1,27 +1,14 @@
-# OpenWrt support for the XGS 107w NPU
+# OpenWrt changes
 
-- `0001-mvebu-add-Sophos-XGS-107w-NPU.patch`: against OpenWrt `main`
-  (b6ba4e9, kernel 6.18). Adds the device `sophos_xgs107w` to
-  `mvebu/cortexa72`: the DTS, the image profile, `board.d` network (panel
-  port 2 = WAN, other ports + SFP = LAN, MACs from the U-Boot env) and the
-  U-Boot env location. It also carries the kernel patch
-  `950-net-dsa-mv88e6xxx-continue-without-PTP-clock.patch` (same as
-  `../patches/`), without which the 88E6193X fails to probe.
-- `diffconfig`: the build configuration (initramfs + ext4 rootfs, LuCI,
-  iperf3, ethtool, uboot-envtools).
+`build/build.sh` applies all of this with `openwrt/apply.sh`; see
+[../docs/build.md](../docs/build.md).
 
-Build:
-
-```sh
-git clone https://github.com/openwrt/openwrt && cd openwrt
-git checkout b6ba4e9 && git apply ../openwrt/0001-mvebu-add-Sophos-XGS-107w-NPU.patch
-./scripts/feeds update -a && ./scripts/feeds install -a
-cp ../openwrt/diffconfig .config && make defconfig && make -j$(nproc)
 ```
-
-Outputs used:
-- `bin/targets/mvebu/cortexa72/*-initramfs-kernel.bin`: RAM boot via
-  kexec (`scripts/60-npu-kexec-openwrt.cmds`);
-- the eMMC slot image, from `scripts/80-mk-emmc-slot.sh <tree> <out>`.
-
-Install: [../docs/openwrt-install.md](../docs/openwrt-install.md).
+patches/          edits to existing OpenWrt files (git format-patch series)
+npu/dts/          device tree of the NPU (sophos_xgs107w, mvebu/cortexa72)
+npu/base-files/   NPU root filesystem additions: vNTB init, defaults, LuCI page
+npu/kernel-patches/  Linux patches for the NPU (950, 951, 952, 954)
+x86/kernel-patches/  Linux patches for the x86 build (952, 953)
+x86/files/        x86 root filesystem overlay: network defaults, ntb link supervisor
+apply.sh          openwrt/apply.sh <openwrt-tree> <npu|x86>
+```

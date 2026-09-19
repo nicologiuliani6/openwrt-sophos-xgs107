@@ -1,0 +1,139 @@
+From 33c54370acb25bad32783397eeb705e8f2042fe2 Mon Sep 17 00:00:00 2001
+From: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
+Date: Sat, 19 Sep 2026 20:13:04 +0200
+Subject: [PATCH 2/3] mvebu: teach the cortexa72 target about the Sophos XGS
+ 107w NPU
+
+Device sophos_xgs107w: image profile, U-Boot environment location, board
+network (panel port 2 = WAN; ports 1, 3-8, the SFP and ntb0 = LAN), port LED
+netdev triggers, and kernel options for the PCIe endpoint (DesignWare EP,
+pci-epf-vntb, NTB built in; ntb_transport/ntb_netdev as modules) and
+HZ=1000.
+
+The device tree, the kernel patches and the base-files live outside this
+patch (see openwrt/apply.sh).
+---
+ .../uboot-tools/uboot-envtools/files/mvebu    |  3 +++
+ .../cortexa72/base-files/etc/board.d/01_leds  |  5 ++++
+ .../base-files/etc/board.d/02_network         |  9 +++++++
+ target/linux/mvebu/cortexa72/config-6.18      | 26 +++++++++++++++++++
+ target/linux/mvebu/image/cortexa72.mk         | 12 +++++++++
+ 5 files changed, 55 insertions(+)
+
+diff --git a/package/boot/uboot-tools/uboot-envtools/files/mvebu b/package/boot/uboot-tools/uboot-envtools/files/mvebu
+index 018177a..0ef42d6 100644
+--- a/package/boot/uboot-tools/uboot-envtools/files/mvebu
++++ b/package/boot/uboot-tools/uboot-envtools/files/mvebu
+@@ -51,6 +51,9 @@ globalscale,mochabin)
+ 	fi
+ 	;;
+ marvell,armada8040-mcbin-doubleshot|\
++sophos,xgs107w-npu)
++	ubootenv_add_uci_config "/dev/mtd1" "0x0" "0x10000" "0x1000" "16"
++	;;
+ marvell,armada8040-mcbin-singleshot)
+ 	ubootenv_add_uci_config "/dev/mtd0" "0x3f0000" "0x10000" "0x10000" "1"
+ 	;;
+diff --git a/target/linux/mvebu/cortexa72/base-files/etc/board.d/01_leds b/target/linux/mvebu/cortexa72/base-files/etc/board.d/01_leds
+index 6e0d271..7e109d5 100644
+--- a/target/linux/mvebu/cortexa72/base-files/etc/board.d/01_leds
++++ b/target/linux/mvebu/cortexa72/base-files/etc/board.d/01_leds
+@@ -18,6 +18,11 @@ mikrotik,rb5009upr)
+ 	ucidef_set_led_netdev "sfp" "SFP" "green:sfp" "sfp"
+ 	ucidef_set_led_netdev "wan-port-link" "WAN-PORT-LINK" "!cp0!config-space@f2000000!mdio@12a200!switch@0!mdio1:00:green:" "p1" "tx rx link_10 link_100 link_1000 link_2500"
+ 	;;
++sophos,xgs107w-npu)
++	for n in 1 2 3 4 5 6 7 8; do
++		ucidef_set_led_netdev "lan$n-a" "LAN$n-a" "green:lan-$n" "p$n" "link tx rx"
++	done
++	;;
+ esac
+ 
+ board_config_flush
+diff --git a/target/linux/mvebu/cortexa72/base-files/etc/board.d/02_network b/target/linux/mvebu/cortexa72/base-files/etc/board.d/02_network
+index 9d0f6d5..1485fd0 100644
+--- a/target/linux/mvebu/cortexa72/base-files/etc/board.d/02_network
++++ b/target/linux/mvebu/cortexa72/base-files/etc/board.d/02_network
+@@ -4,6 +4,7 @@
+ #
+ 
+ . /lib/functions/uci-defaults.sh
++. /lib/functions/system.sh
+ 
+ board_config_update
+ 
+@@ -42,6 +43,14 @@ mikrotik,rb5009ug|\
+ mikrotik,rb5009upr)
+ 	ucidef_set_interfaces_lan_wan "p2 p3 p4 p5 p6 p7 p8 sfp" "p1"
+ 	;;
++sophos,xgs107w-npu)
++	ucidef_set_interfaces_lan_wan "p1 p3 p4 p5 p6 p7 p8 sfp ntb0" "p2"
++	# U-Boot "ethaddr" is label MAC + 9 (the NPU backplane port)
++	label_mac=$(macaddr_add "$(mtd_get_mac_ascii u-boot-env ethaddr)" -9)
++	ucidef_set_interface_macaddr "lan" "$label_mac"
++	ucidef_set_interface_macaddr "wan" "$(macaddr_add "$label_mac" 1)"
++	ucidef_set_label_macaddr "$label_mac"
++	;;
+ solidrun,clearfog-pro)
+ 	ucidef_set_interfaces_lan_wan "lan1 lan2 lan3 lan4 lan5 lan6 eth0 eth1" "eth2"
+ 	;;
+diff --git a/target/linux/mvebu/cortexa72/config-6.18 b/target/linux/mvebu/cortexa72/config-6.18
+index 13507bc..ef12774 100644
+--- a/target/linux/mvebu/cortexa72/config-6.18
++++ b/target/linux/mvebu/cortexa72/config-6.18
+@@ -127,3 +127,29 @@ CONFIG_TRACE_IRQFLAGS_NMI_SUPPORT=y
+ CONFIG_UNMAP_KERNEL_AT_EL0=y
+ CONFIG_VMAP_STACK=y
+ CONFIG_ZONE_DMA32=y
++CONFIG_CONFIGFS_FS=y
++CONFIG_PCI_ENDPOINT=y
++CONFIG_PCI_ENDPOINT_CONFIGFS=y
++CONFIG_PCIE_DW_EP=y
++CONFIG_PCIE_DW_PLAT=y
++CONFIG_PCIE_DW_PLAT_EP=y
++CONFIG_PCI_EPF_VNTB=y
++CONFIG_NTB=y
++CONFIG_NTB_TRANSPORT=m
++CONFIG_NTB_NETDEV=m
++# CONFIG_PCIE_CADENCE_PLAT_EP is not set
++# CONFIG_PCIE_CADENCE_PLAT_HOST is not set
++# CONFIG_PCI_ENDPOINT_MSI_DOORBELL is not set
++# CONFIG_PCI_EPF_TEST is not set
++# CONFIG_PCI_EPF_NTB is not set
++# CONFIG_PCI_ENDPOINT_TEST is not set
++# CONFIG_NTB_MSI is not set
++# CONFIG_NTB_IDT is not set
++# CONFIG_NTB_EPF is not set
++# CONFIG_NTB_SWITCHTEC is not set
++# CONFIG_NTB_PINGPONG is not set
++# CONFIG_NTB_TOOL is not set
++# CONFIG_NTB_PERF is not set
++# CONFIG_HZ_100 is not set
++CONFIG_HZ_1000=y
++CONFIG_HZ=1000
+diff --git a/target/linux/mvebu/image/cortexa72.mk b/target/linux/mvebu/image/cortexa72.mk
+index b6042bb..7865ea5 100644
+--- a/target/linux/mvebu/image/cortexa72.mk
++++ b/target/linux/mvebu/image/cortexa72.mk
+@@ -155,6 +155,18 @@ define Device/iei_puzzle-m902
+ endef
+ TARGET_DEVICES += iei_puzzle-m902
+ 
++define Device/sophos_xgs107w
++  $(call Device/Default-arm64)
++  SOC := cn9130
++  DEVICE_VENDOR := Sophos
++  DEVICE_MODEL := XGS 107w
++  DEVICE_VARIANT := NPU
++  DEVICE_DTS := cn9130-sophos-xgs107w
++  DEVICE_PACKAGES += kmod-dsa-mv88e6xxx uboot-envtools kmod-ntb-netdev kmod-usb3 kmod-usb-storage \
++	kmod-usb-storage-uas kmod-fs-ext4 kmod-fs-vfat kmod-fs-exfat block-mount usbutils
++endef
++TARGET_DEVICES += sophos_xgs107w
++
+ define Device/solidrun_clearfog-pro
+   $(call Device/Default-arm64)
+   SOC := cn9130
+-- 
+2.48.1
+
