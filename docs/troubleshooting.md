@@ -4,7 +4,7 @@
 |---|---|
 | `install-x86.sh`: `/dev/swap is not a block device` | SFOS is not in its normal state; reboot SFOS once, open the advanced shell again. **Never** `dd of=/dev/sda8`: SFOS has no such node and `dd` silently writes a file into RAM |
 | `install-x86.sh`: `raw disk read-back mismatch` | the write did not reach the disk. Nothing else was changed (the MBR entry comes after the check); run it again |
-| `install-npu.sh`: `the NPU is not running the stock Linux 4.14` | the NPU already runs OpenWrt or did not boot; the installer only works against stock. From OpenWrt use `dd`/`ssh` by hand (see [install.md](install.md)) or boot stock: `run bootcmd_stock` at the U-Boot prompt |
+| `install-npu.sh`: `the NPU is not running the stock Linux 4.14` | the NPU already runs OpenWrt or did not boot; the installer only works against stock. Boot stock (`run bootcmd_stock` at the NPU's U-Boot prompt) and run the installer again, see [recovery.md](recovery.md) |
 | x86 boots SFOS after the install | the GRUB default was not changed or SFOS's `grub.cfg` was regenerated: pick `OpenWrt` in the menu, then `install-x86.sh` again. If SFOS finished booting, its `mkswap` erased the OpenWrt root: reinstall |
 | x86 has no network / no `ntb0` | `lspci -nn -s 03:00.0` should say `[1957:0809]`; if it says `[11ab:7080]` the NPU is still in U-Boot or on stock. The NPU must be running OpenWrt (`/etc/init.d/vntb` started). `ntb-link-wait` retries every 5 s; force it with `echo 1 > /sys/bus/pci/devices/0000:03:00.0/remove; echo 1 > /sys/bus/pci/rescan` |
 | x86 log: `AMD-Vi: IO_PAGE_FAULT … address=0x0` | the host is using MSI-X; the x86 kernel is missing patch 953 |

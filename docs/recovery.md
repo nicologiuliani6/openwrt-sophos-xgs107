@@ -44,10 +44,12 @@ The x86 has no display; everything is on the serial console.
 
 ## Reinstalling the x86 later
 
-`install-x86.sh` downloads through the NPU, which under OpenWrt is the router:
-run it from any Linux on the x86 that has network. If the x86 is unbootable,
-boot the NPU on stock (`run bootcmd_stock` at its U-Boot prompt) and use SFOS's
-network as at install time.
+`install-x86.sh` and `install-npu.sh` only work as at install time: from the
+SFOS advanced shell, with the NPU on its stock system (SFOS's only network).
+So: boot the NPU on stock (`run bootcmd_stock` at its U-Boot prompt), choose
+an SFOS entry in the x86's GRUB menu (this destroys the OpenWrt root by
+`mkswap`, which is about to be rewritten anyway), open the advanced shell and
+run `./install.sh` on the PC again.
 
 ## Lost SFOS admin password (needed only at install time)
 
