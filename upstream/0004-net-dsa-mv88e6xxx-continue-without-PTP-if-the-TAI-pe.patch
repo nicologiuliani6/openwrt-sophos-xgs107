@@ -1,32 +1,47 @@
-From 737c8edc0e94a31c419f0654be33769fac3e486c Mon Sep 17 00:00:00 2001
-From: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
-Date: Sat, 19 Sep 2026 09:23:35 +0200
-Subject: [PATCH 4/4] net: dsa: mv88e6xxx: continue without PTP if the TAI
- clock is unusable
+From a73a536746c53a7e3681dc0b04803e75a6bc6436 Mon Sep 17 00:00:00 2001
+From: Nicolo Giuliani <nicolo.giuliani6@studio.unibo.it>
+Date: Sat, 19 Sep 2026 21:00:51 +0200
+Subject: [PATCH net] net: dsa: mv88e6xxx: continue without PTP if the TAI
+ period is invalid
 
-On the 88E6193X of the Sophos XGS 107w the TAI clock period register
-reads 0 after a hardware reset. mv88e6xxx_cc_coeff_get() then fails with
--ENODEV ("unexpected cycle counter period of 0 ps"), mv88e6xxx_setup()
-propagates it, and the whole switch probe is aborted, although the
-switch works fine without PTP.
+Since commit 7e3c18097a70 ("net: dsa: mv88e6xxx: read cycle counter
+period from hardware"), mv88e6xxx_ptp_setup() reads the TAI clock period
+register and fails with -ENODEV if the value is not one of the supported
+periods. mv88e6xxx_setup() propagates the error, so the switch does not
+probe at all, although it is fully usable without PTP. Before that commit
+the register was not read and the probe did not depend on its value.
 
-Treat -ENODEV from the PTP setup as "no PTP clock": warn, skip the
-hardware timestamping setup and carry on. As no PHC is then registered,
-make the timestamping entry points check for that as well, since they
-otherwise dereference chip->ptp_clock.
+The 88E6193X on the Sophos XGS 107w reads 0 in that register, so its
+probe fails with:
 
-Assisted-by: Claude:claude-opus-5
-Signed-off-by: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
+  mv88e6xxx ...: unexpected cycle counter period of 0 ps
+
+Treat -ENODEV from mv88e6xxx_ptp_setup() as the absence of a usable PTP
+clock: warn, skip the hardware timestamping setup and carry on without
+registering a PHC. -ENODEV can only come from mv88e6xxx_cc_coeff_get(),
+which runs before ptp_setup changes any state, so there is nothing to
+undo, and all other errors still fail the probe.
+
+Without a PHC chip->ptp_clock stays NULL, and the timestamping entry
+points dereference it (ptp_clock_index() in get_ts_info,
+ptp_schedule_worker() in the rx and tx paths). Make get_ts_info,
+port_hwtstamp_set/get and mv88e6xxx_should_tstamp() treat a missing
+clock like a chip without ptp_support. Switches that register a PHC are
+unaffected.
+
+Fixes: 7e3c18097a70 ("net: dsa: mv88e6xxx: read cycle counter period from hardware")
+Assisted-by: LLM
+Signed-off-by: Nicolo Giuliani <nicolo.giuliani6@studio.unibo.it>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c     | 19 ++++++++++++++-----
  drivers/net/dsa/mv88e6xxx/hwtstamp.c |  8 ++++----
  2 files changed, 18 insertions(+), 9 deletions(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 09002c8..e025936 100644
+index 8cf5681f5..2f5c16fee 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
-@@ -4071,12 +4071,21 @@ static int mv88e6xxx_setup(struct dsa_switch *ds)
+@@ -4106,12 +4106,21 @@ static int mv88e6xxx_setup(struct dsa_switch *ds)
  	/* Setup PTP Hardware Clock and timestamping */
  	if (chip->info->ptp_support) {
  		err = mv88e6xxx_ptp_setup(chip);
@@ -36,9 +51,9 @@ index 09002c8..e025936 100644
 -		err = mv88e6xxx_hwtstamp_setup(chip);
 -		if (err)
 +		if (err == -ENODEV) {
-+			/* No usable TAI clock (e.g. its period reads as 0 on
-+			 * some 88E6193X boards): run the switch without PTP
-+			 * rather than failing the whole probe.
++			/* The TAI clock period is not one that the driver
++			 * supports: run the switch without PTP rather than
++			 * failing the whole probe.
 +			 */
 +			dev_warn(chip->dev,
 +				 "PTP clock unavailable, hardware timestamping disabled\n");
@@ -54,7 +69,7 @@ index 09002c8..e025936 100644
  
  	err = mv88e6xxx_stats_setup(chip);
 diff --git a/drivers/net/dsa/mv88e6xxx/hwtstamp.c b/drivers/net/dsa/mv88e6xxx/hwtstamp.c
-index 6e6472a..847f9dd 100644
+index 6e6472a3b..847f9dd44 100644
 --- a/drivers/net/dsa/mv88e6xxx/hwtstamp.c
 +++ b/drivers/net/dsa/mv88e6xxx/hwtstamp.c
 @@ -72,7 +72,7 @@ int mv88e6xxx_get_ts_info(struct dsa_switch *ds, int port,

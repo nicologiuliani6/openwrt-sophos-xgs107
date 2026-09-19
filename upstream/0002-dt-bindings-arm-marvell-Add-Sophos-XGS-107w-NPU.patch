@@ -1,30 +1,32 @@
-From efa0dc08c42a57979e696497962926d222abc7c1 Mon Sep 17 00:00:00 2001
-From: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
+From 713cc32b1302e643dc0c4b8ea83aa6efa268ca30 Mon Sep 17 00:00:00 2001
+From: Nicolo Giuliani <nicolo.giuliani6@studio.unibo.it>
 Date: Sat, 19 Sep 2026 09:22:53 +0200
-Subject: [PATCH 2/4] dt-bindings: arm: marvell: Add Sophos XGS 107w NPU
+Subject: [PATCH 2/3] dt-bindings: arm: marvell: Add Sophos XGS 107w NPU
 
-Document the compatible string of the network processing unit of the
-Sophos XGS 87/107 desktop firewalls. It is a self-contained Armada CN9130
-system with its own eMMC and SPI NOR that serves the front-panel ports
-through an 88E6193X switch, and it sits behind a PCIe link to an x86
-host.
+The Sophos XGS 87/107 desktop firewalls combine an AMD x86 host with a
+separate network processing unit (NPU). The NPU is a Marvell Armada CN9130
+SoC with its own eMMC and SPI NOR flash, connected to the x86 host over
+PCIe. It serves the front panel ports through a Marvell 88E6193X switch.
 
-Assisted-by: Claude:claude-sonnet-5
-Signed-off-by: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
+Document the compatible string of the NPU board, with the CN9130 SoC
+compatibles as fallbacks.
+
+Assisted-by: LLM
+Signed-off-by: Nicolo Giuliani <nicolo.giuliani6@studio.unibo.it>
 ---
  .../devicetree/bindings/arm/marvell/armada-7k-8k.yaml    | 9 +++++++++
  1 file changed, 9 insertions(+)
 
 diff --git a/Documentation/devicetree/bindings/arm/marvell/armada-7k-8k.yaml b/Documentation/devicetree/bindings/arm/marvell/armada-7k-8k.yaml
-index 4bc7454..ede6cd7 100644
+index 7e77310da6..2e114139f1 100644
 --- a/Documentation/devicetree/bindings/arm/marvell/armada-7k-8k.yaml
 +++ b/Documentation/devicetree/bindings/arm/marvell/armada-7k-8k.yaml
-@@ -107,6 +107,15 @@ properties:
-           - const: marvell,armada-ap807-quad
-           - const: marvell,armada-ap807
+@@ -136,4 +136,13 @@ properties:
+           - const: solidrun,cn9132-sr-cex7
+           - const: marvell,cn9130
  
 +      - description:
-+          Sophos XGS 87/107 series network processor (Armada CN9130 SoC
++          Sophos XGS 87/107 network processing unit (Armada CN9130 SoC
 +          with an 88E6193X switch)
 +        items:
 +          - const: sophos,xgs107w-npu
@@ -32,9 +34,7 @@ index 4bc7454..ede6cd7 100644
 +          - const: marvell,armada-ap807-quad
 +          - const: marvell,armada-ap807
 +
-       - description:
-           SolidRun CN9130 SoM based single-board computers
-         items:
+ additionalProperties: true
 -- 
 2.48.1
 

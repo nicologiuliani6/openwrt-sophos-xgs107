@@ -1,0 +1,45 @@
+From: Nicolo Giuliani <nicolo.giuliani6@studio.unibo.it>
+Subject: [PATCH 0/3] arm64: dts: marvell: Add Sophos XGS 107w NPU
+
+The Sophos XGS 87/107 desktop firewalls pair an AMD x86 host with a
+separate network processing unit (NPU): a Marvell Armada CN9130 SoC with
+its own eMMC and SPI NOR flash. The NPU serves the eight RJ45 ports and
+the SFP cage through a Marvell 88E6193X switch on its MDIO bus, which is
+connected to the SoC by a 10GBASE-R link, and reaches the x86 host over
+PCIe.
+
+This series adds the Sophos vendor prefix, the compatible string of the
+NPU board and a device tree that describes the NPU as a standalone system:
+UART console, eMMC, SPI NOR flash, the PCA9555 GPIO expander of the port
+LEDs, the SFP cage and the switch with its ports. The LEDs, the USB ports
+and the PCIe link to the x86 host (the CN9130 acts as a PCIe endpoint
+towards it, which needs endpoint support that is not part of this series)
+are not described.
+
+The reset line of the switch is not passed to the mv88e6xxx driver as
+reset-gpios, because the 88E6193X needs about two seconds after a reset,
+much longer than the driver waits. The boot loader resets it instead.
+The details are in patch 3.
+
+Tested on an XGS 107w with Linux 6.18: boot from eMMC, eMMC and SPI NOR
+access, the mvpp2 link to the switch at 10 Gb/s, the 88E6193X probing with
+its eight user ports, and 941 Mbit/s through a front port. The SFP cage
+and the PCA9555 outputs are untested.
+
+dt_binding_check passes for vendor-prefixes.yaml and armada-7k-8k.yaml,
+and CHECK_DTBS=y on marvell/cn9130-sophos-xgs107w.dtb reports no warning
+specific to this board.
+
+Based on the mvebu/dt branch of the mvebu tree (008e9faade).
+
+Nicolo Giuliani (3):
+  dt-bindings: vendor-prefixes: Add Sophos
+  dt-bindings: arm: marvell: Add Sophos XGS 107w NPU
+  arm64: dts: marvell: Add Sophos XGS 107w NPU board
+
+ .../bindings/arm/marvell/armada-7k-8k.yaml    |   9 +
+ .../devicetree/bindings/vendor-prefixes.yaml  |   2 +
+ arch/arm64/boot/dts/marvell/Makefile          |   1 +
+ .../dts/marvell/cn9130-sophos-xgs107w.dts     | 209 ++++++++++++++++++
+ 4 files changed, 221 insertions(+)
+ create mode 100644 arch/arm64/boot/dts/marvell/cn9130-sophos-xgs107w.dts

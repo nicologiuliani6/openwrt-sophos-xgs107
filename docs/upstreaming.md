@@ -1,46 +1,68 @@
 # Upstream submission
 
-The board is not in mainline Linux or OpenWrt yet. Four Linux patches are
-ready in `upstream/`, against Linux v6.18.52 (rebase on the current
-subsystem tree before sending):
+The board is not in mainline Linux or OpenWrt yet. The Linux patches are in
+`upstream/`:
 
-| Patch | What | Send to |
+| Patch | What | Tree |
 |---|---|---|
-| `0001` | `dt-bindings: vendor-prefixes: Add Sophos` | Marvell mvebu / arm-soc, devicetree list |
+| `0001` | `dt-bindings: vendor-prefixes: Add Sophos` | Marvell mvebu (`mvebu/dt`) |
 | `0002` | `dt-bindings: arm: marvell: Add Sophos XGS 107w NPU` | same |
 | `0003` | `arm64: dts: marvell: Add Sophos XGS 107w NPU board` | same |
-| `0004` | `net: dsa: mv88e6xxx: continue without PTP if the TAI clock is unusable` | netdev |
+| `0004` | `net: dsa: mv88e6xxx`: continue without PTP if the TAI period is invalid | `net` (a fix, with a `Fixes:` tag) |
 
-`0001`–`0003` are one series (`[PATCH 0/3]`); `0004` is separate
-(`[PATCH net-next]`). Get the recipients with `scripts/get_maintainer.pl`
-on the rebased tree.
+`0001`–`0003` are one series with the cover letter `0000-cover-letter.txt`;
+`0004` is sent on its own.
 
-Checks done: `checkpatch.pl --strict`, `make dt_binding_check` (clean),
-`make CHECK_DTBS=y marvell/cn9130-sophos-xgs107w.dtb` (no warning on this
-board's nodes). Tested on hardware: boot, eMMC, SPI NOR, `mvpp2` at 10 Gb/s,
-the 88E6193X with eight DSA ports, 941 Mbit/s through a front port. Not
-tested: the SFP cage and the port LEDs.
+The DTS in `0003` describes the NPU as a standalone system (UART, eMMC, SPI
+NOR, GPIO expander, SFP, the switch with eight DSA ports). The PCIe endpoint,
+USB and LED nodes of `openwrt/npu/dts/cn9130-sophos-xgs107w.dts` are OpenWrt
+only.
 
-The DT patch describes the NPU as a standalone system. The PCIe endpoint,
-USB and LED nodes in `openwrt/npu/dts/cn9130-sophos-xgs107w.dts` are added
-in the OpenWrt DTS and are not part of the upstream patch yet (the endpoint
-needs the patches in `openwrt/npu/kernel-patches/` first).
+The switch reset is not `reset-gpios` on purpose: the 88E6193X needs about two
+seconds after reset, longer than `mv88e6xxx` waits, so the boot loader does it.
 
-The switch's reset GPIO is deliberately not `reset-gpios`: the 88E6193X
-needs about two seconds after reset, longer than `mv88e6xxx` waits, so the
-boot loader does it.
+## Checks
 
-For `0004`, a reviewer will reasonably ask why the TAI period register
-reads 0 on this board (never configured by the boot loader?). If programming
-the TAI clock is preferred, drop the patch in favour of that.
+`dt_binding_check` (clean), `CHECK_DTBS=y` on the board's DTB (only warnings
+shared with other CN913x boards), `checkpatch.pl --strict --codespell`
+(clean; one inherent MAINTAINERS notice on the DTS), the driver builds with
+`W=1` with PTP on and off. The trimmed DTS boots the reference unit: eMMC,
+the 88E6193X with eight ports and the SFP node, 10 Gb/s to the switch,
+936 Mbit/s through a port. The SFP cage and LEDs are untested.
 
-## Sending
+## Sending with b4
 
 ```sh
-git clone --depth 1 https://git.kernel.org/pub/scm/linux/kernel/git/netdev/net-next.git
-cd net-next && git am ../upstream/0004-*.patch      # adjust if it no longer applies
-scripts/checkpatch.pl --strict -g HEAD
-git send-email --to=netdev@vger.kernel.org --cc=... HEAD~1
+pip install b4 patatt
+patatt genkey                                   # then add the printed [patatt] block to ~/.gitconfig
+git config --global b4.send-endpoint-web https://lkml.kernel.org/_b4_submit
+b4 send --web-auth-new                          # confirm the emailed challenge:
+b4 send --web-auth-verify <challenge>           #   done once
 ```
 
-For `0001`–`0003` use the mvebu/arm-soc tree the same way.
+DT series, in a clone of the mvebu tree:
+
+```sh
+git checkout -b sophos-npu origin/mvebu/dt
+git am -3 upstream/000[123]-*.patch
+b4 prep -e origin/mvebu/dt
+b4 prep --edit-cover                            # paste upstream/0000-cover-letter.txt
+b4 prep --auto-to-cc
+b4 send -o /tmp/out                             # writes the emails, sends nothing
+b4 send --reflect                               # sends only to yourself
+b4 send
+```
+
+Netdev patch, in a clone of the `net` tree:
+
+```sh
+git checkout -b mv88e6xxx-ptp origin/main
+git am -3 upstream/0004-*.patch
+b4 prep -e origin/main
+b4 prep --set-prefixes net
+b4 prep --edit-cover
+b4 prep --auto-to-cc
+b4 send -o /tmp/out && b4 send --reflect && b4 send
+```
+
+Rebase on the current tip before sending; `git am -3` reports any drift.

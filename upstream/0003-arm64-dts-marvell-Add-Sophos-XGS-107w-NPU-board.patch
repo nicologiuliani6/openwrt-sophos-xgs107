@@ -1,37 +1,49 @@
-From af410401455f3e4644d54e6ad70e9fde920817e4 Mon Sep 17 00:00:00 2001
-From: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
+From 3546775282cfd7176b52edd92ff775f00d581d1a Mon Sep 17 00:00:00 2001
+From: Nicolo Giuliani <nicolo.giuliani6@studio.unibo.it>
 Date: Sat, 19 Sep 2026 09:23:35 +0200
-Subject: [PATCH 3/4] arm64: dts: marvell: Add Sophos XGS 107w NPU board
+Subject: [PATCH 3/3] arm64: dts: marvell: Add Sophos XGS 107w NPU board
 
-The Sophos XGS 87/107 desktop firewalls pair an AMD x86 host with a
-separate network processing unit: an Armada CN9130 SoC with its own
-eMMC, SPI NOR and a Marvell 88E6193X switch on the SoC's MDIO bus. The
-switch's port 0 is a 10G link to the SoC's first mvpp2 port, ports 1-8
-are the front-panel RJ45 ports through the switch's internal PHYs, and
-port 9 is the SFP cage.
+Add a device tree for the network processing unit (NPU) of the Sophos
+XGS 87/107 desktop firewalls. The appliance pairs an AMD x86 host with the
+NPU, a Marvell Armada CN9130 SoC with its own eMMC and SPI NOR flash that
+runs independently of the host and serves the front panel ports.
 
-Describe that hardware: the UART, the 8 GB eMMC, the SPI NOR holding
-U-Boot (read-only), the two PCA9555 GPIO expanders, the SFP cage, and
-the switch with its ports.
+The eight RJ45 ports and the SFP cage are connected through a Marvell
+88E6193X switch on the MDIO bus of the SoC, at address 2. Switch port 0
+is the CPU port, a 10GBASE-R link to the first mvpp2 port. Ports 1 to 8
+are the RJ45 ports, which use the internal PHYs of the switch, and
+port 9 is the SFP cage, connected over 1000BASE-X.
 
-The switch reset line (CP GPIO2 pin 17) is not given to the driver as
-reset-gpios: the 88E6193X needs about two seconds after reset, far more
-than the driver waits, and the probe would time out. The boot loader
-resets it before starting the kernel.
+Describe the UART console, the eMMC, the SPI NOR flash that holds the boot
+loader and its environment (read-only), the PCA9555 GPIO expander that
+drives the port LEDs, the SFP cage and the switch with its ports. The LEDs
+themselves, the PCIe link to the x86 host and the USB ports are not
+described.
 
-Assisted-by: Claude:claude-opus-5
-Signed-off-by: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
+The reset line of the switch (CP GPIO2 pin 17) is deliberately not given
+to the mv88e6xxx driver as reset-gpios. The 88E6193X needs about two
+seconds after a reset before it can be used, much longer than the driver
+waits, so the probe would time out. The boot loader resets the switch
+before it starts the kernel.
+
+Tested on an XGS 107w with Linux 6.18: boot from eMMC, eMMC and SPI NOR
+access, the mvpp2 link to the switch at 10 Gb/s, the 88E6193X probing with
+its eight user ports, and 941 Mbit/s through a front port. The SFP cage
+and the PCA9555 outputs are untested.
+
+Assisted-by: LLM
+Signed-off-by: Nicolo Giuliani <nicolo.giuliani6@studio.unibo.it>
 ---
  arch/arm64/boot/dts/marvell/Makefile          |   1 +
- .../dts/marvell/cn9130-sophos-xgs107w.dts     | 231 ++++++++++++++++++
- 2 files changed, 232 insertions(+)
+ .../dts/marvell/cn9130-sophos-xgs107w.dts     | 209 ++++++++++++++++++
+ 2 files changed, 210 insertions(+)
  create mode 100644 arch/arm64/boot/dts/marvell/cn9130-sophos-xgs107w.dts
 
 diff --git a/arch/arm64/boot/dts/marvell/Makefile b/arch/arm64/boot/dts/marvell/Makefile
-index a774bc7..800f111 100644
+index 09d1544041..81f892715b 100644
 --- a/arch/arm64/boot/dts/marvell/Makefile
 +++ b/arch/arm64/boot/dts/marvell/Makefile
-@@ -33,5 +33,6 @@ dtb-$(CONFIG_ARCH_MVEBU) += cn9130-cf-base.dtb
+@@ -34,5 +34,6 @@ dtb-$(CONFIG_ARCH_MVEBU) += cn9130-cf-base.dtb
  dtb-$(CONFIG_ARCH_MVEBU) += cn9130-cf-pro.dtb
  dtb-$(CONFIG_ARCH_MVEBU) += cn9131-cf-solidwan.dtb
  dtb-$(CONFIG_ARCH_MVEBU) += cn9132-clearfog.dtb
@@ -40,20 +52,16 @@ index a774bc7..800f111 100644
  subdir-y	+= mmp
 diff --git a/arch/arm64/boot/dts/marvell/cn9130-sophos-xgs107w.dts b/arch/arm64/boot/dts/marvell/cn9130-sophos-xgs107w.dts
 new file mode 100644
-index 0000000..d62b7da
+index 0000000000..d98d8da10e
 --- /dev/null
 +++ b/arch/arm64/boot/dts/marvell/cn9130-sophos-xgs107w.dts
-@@ -0,0 +1,231 @@
+@@ -0,0 +1,209 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
-+ * Sophos XGS 87(w) / 107(w) — NPU complex: Marvell CN9130 + 88E6193X.
++ * Device tree for the network processing unit (NPU) of the Sophos XGS 87/107
++ * firewalls: a Marvell CN9130 SoC with a Marvell 88E6193X switch.
 + *
-+ * Derived from the stock "Marvell CN9130 Senao XGS board" device tree
-+ * (cn9130-senao-xgs.dtb, SFOS 19.5.4) and SFOS's xgs-platform port map.
-+ * See docs/hardware-architecture.md.
-+ *
-+ * The x86 host on the same board is not described here: the CN9130 is a
-+ * PCIe endpoint towards it, and endpoint mode is not used by this DT.
++ * The x86 host on the same board is not described here.
 + */
 +
 +/dts-v1/;
@@ -74,7 +82,6 @@ index 0000000..d62b7da
 +		ethernet0 = &cp0_eth0;
 +		i2c0 = &cp0_i2c0;
 +		i2c1 = &cp0_i2c1;
-+		spi0 = &cp0_spi0;
 +	};
 +
 +	memory@0 {
@@ -83,14 +90,14 @@ index 0000000..d62b7da
 +	};
 +
 +	reserved-memory {
-+		/* OP-TEE, as reserved by the stock firmware (TF-A 10.22.06) */
++		/* OP-TEE, reserved by the firmware */
 +		tee@4400000 {
 +			reg = <0x0 0x4400000 0x0 0x1000000>;
 +			no-map;
 +		};
 +	};
 +
-+	/* Front-panel SFP "F1", wired to 88E6193X port 9 */
++	/* Front-panel SFP cage "F1", wired to switch port 9 */
 +	sfp: sfp {
 +		compatible = "sff,sfp";
 +		i2c-bus = <&cp0_i2c1>;
@@ -98,7 +105,6 @@ index 0000000..d62b7da
 +		tx-fault-gpios = <&cp0_gpio1 2 GPIO_ACTIVE_HIGH>;
 +		mod-def0-gpios = <&cp0_gpio1 3 GPIO_ACTIVE_LOW>;
 +		tx-disable-gpios = <&cp0_gpio1 7 GPIO_ACTIVE_HIGH>;
-+		maximum-power-milliwatt = <2000>;
 +	};
 +};
 +
@@ -106,7 +112,7 @@ index 0000000..d62b7da
 +	status = "okay";
 +};
 +
-+/* 8 GB eMMC on the AP */
++/* eMMC on the AP */
 +&ap_sdhci0 {
 +	bus-width = <8>;
 +	non-removable;
@@ -115,8 +121,8 @@ index 0000000..d62b7da
 +};
 +
 +/*
-+ * MPP muxing is left as set up by the stock U-Boot: no pin groups are
-+ * claimed here, the controller only exists for the GPIO banks.
++ * The MPP pin muxing is left as configured by the boot loader; the pin
++ * controller node only exists to back the GPIO banks.
 + */
 +&cp0_syscon0 {
 +	cp0_pinctrl: pinctrl {
@@ -124,20 +130,12 @@ index 0000000..d62b7da
 +	};
 +};
 +
-+&cp0_gpio1 {
-+	status = "okay";
-+};
-+
-+&cp0_gpio2 {
-+	status = "okay";
-+};
-+
 +&cp0_i2c0 {
 +	clock-frequency = <100000>;
 +	status = "okay";
 +
-+	/* Port speed LEDs (xgs-platform "gpio:3:*") */
-+	led_gpio: gpio@20 {
++	/* Drives the port speed LEDs, which are not described yet */
++	gpio@20 {
 +		compatible = "nxp,pca9555";
 +		reg = <0x20>;
 +		gpio-controller;
@@ -151,11 +149,7 @@ index 0000000..d62b7da
 +	status = "okay";
 +};
 +
-+/*
-+ * 4 MB SPI NOR: stock U-Boot + env. Read-only on purpose.
-+ * The stock DT calls this controller (0x700600) "cell-index 1", but in
-+ * mainline it is cp0_spi0.
-+ */
++/* 4 MB SPI NOR with U-Boot and its environment, read-only on purpose */
 +&cp0_spi0 {
 +	status = "okay";
 +
@@ -188,12 +182,12 @@ index 0000000..d62b7da
 +	status = "okay";
 +};
 +
-+/* 10G link to 88E6193X port 0, comphy lane 4 */
++/* 10G link to switch port 0 */
 +&cp0_eth0 {
-+	status = "okay";
 +	phy-mode = "10gbase-r";
 +	phys = <&cp0_comphy4 0>;
 +	managed = "in-band-status";
++	status = "okay";
 +};
 +
 +&cp0_mdio {
@@ -203,14 +197,11 @@ index 0000000..d62b7da
 +		compatible = "marvell,mv88e6190";
 +		reg = <2>;
 +		/*
-+		 * The switch reset line is CP GPIO2 pin 17 (stock U-Boot
-+		 * "sw_init_p0: gpio clear C17 … gpio set C17"; U-Boot names the
-+		 * banks A = AP, B = CP gpio1, C = CP gpio2). It is deliberately
-+		 * not given to the driver as reset-gpios: after reset the 6193X
-+		 * needs far longer than mv88e6xxx's 10 ms + 50 ms poll (stock
-+		 * waits 2 s), and probing times out with -ETIMEDOUT. The reset
-+		 * is done by whatever starts this kernel (bootloader or kexec
-+		 * wrapper) instead.
++		 * The reset line of the switch is CP GPIO2 pin 17. It is not
++		 * described as reset-gpios: the 88E6193X needs about two
++		 * seconds after a reset before it can be used, much longer
++		 * than the driver waits, and the probe would time out. The
++		 * boot loader resets the switch before starting the kernel.
 +		 */
 +
 +		ports {
@@ -219,7 +210,6 @@ index 0000000..d62b7da
 +
 +			port@0 {
 +				reg = <0>;
-+				label = "cpu";
 +				ethernet = <&cp0_eth0>;
 +				phy-mode = "10gbase-r";
 +				managed = "in-band-status";
