@@ -91,7 +91,7 @@ if [ -n "$SERIAL" ]; then
 else
 	cat <<EOT
 Paste these two lines into the SFOS advanced shell, one after the other, and
-wait for the [install-x86] DONE and [install-npu] DONE lines:
+wait for the [install] DONE and [install-npu] DONE lines:
 
   $X86
 
