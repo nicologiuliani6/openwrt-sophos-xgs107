@@ -1,0 +1,38 @@
+#!/bin/sh /etc/rc.common
+# Turn the CN9130 PCIe endpoint (link to the x86 host) into a virtual NTB
+# Ethernet: pci-epf-vntb presents 1957:0809 to the host, whose ntb_hw_epf +
+# ntb_netdev then create "ntb0" on both sides.
+
+START=20
+
+start() {
+	[ -d /sys/kernel/config/pci_ep ] || mount -t configfs none /sys/kernel/config
+	C=/sys/kernel/config/pci_ep
+	EPC=$(ls /sys/class/pci_epc 2>/dev/null | head -n1)
+	[ -n "$EPC" ] || return 0
+	F=$C/functions/pci_epf_vntb/func1
+	[ -d $F ] || mkdir $F || return 1
+	N=$F/pci_epf_vntb.0
+	echo 0x1957 > $F/vendorid
+	echo 0x0809 > $F/deviceid
+	echo 16 > $F/msi_interrupts
+	echo 0 > $N/ctrl_bar
+	echo 2 > $N/db_bar
+	echo 4 > $N/mw1_bar
+	echo 4 > $N/db_count
+	echo 128 > $N/spad_count
+	echo 1 > $N/num_mws
+	echo 0x100000 > $N/mw1
+	echo 0x1957 > $N/vntb_vid
+	echo 0x080A > $N/vntb_pid
+	echo 0x10 > $N/vbus_number
+	[ -e $C/controllers/$EPC/func1 ] || ln -s $F $C/controllers/$EPC/func1
+	echo 1 > $C/controllers/$EPC/start
+}
+
+stop() {
+	C=/sys/kernel/config/pci_ep
+	EPC=$(ls /sys/class/pci_epc 2>/dev/null | head -n1)
+	[ -n "$EPC" ] && echo 0 > $C/controllers/$EPC/start 2>/dev/null
+	return 0
+}

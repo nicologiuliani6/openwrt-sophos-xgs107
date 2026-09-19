@@ -1,0 +1,39 @@
+#!/bin/sh
+# Keep the PCIe link to the NPU (Marvell CN9130, endpoint) enumerated as the
+# NTB device 1957:0809 that the NPU's pci-epf-vntb presents. The NPU may come
+# up after (or reboot behind) this host: rescan until it shows, and rebuild
+# the link if ntb0 stays without carrier.
+
+ntb_dev() {
+	for d in /sys/bus/pci/devices/*; do
+		[ "$(cat $d/vendor)" = 0x1957 ] && [ "$(cat $d/device)" = 0x0809 ] && { echo $d; return 0; }
+	done
+	return 1
+}
+
+rescan() {
+	for d in /sys/bus/pci/devices/*; do	# identity left by U-Boot / stock firmware
+		[ "$(cat $d/vendor)" = 0x11ab ] && [ "$(cat $d/device)" = 0x7080 ] && echo 1 > $d/remove
+	done
+	echo 1 > /sys/bus/pci/rescan
+}
+
+down=0
+while :; do
+	if ! ntb_dev >/dev/null; then
+		rescan
+		down=0
+	elif [ "$(cat /sys/class/net/ntb0/carrier 2>/dev/null)" = 1 ]; then
+		down=0
+	else
+		down=$((down + 1))
+		if [ $down -ge 12 ]; then	# a minute without link: start over
+			rmmod ntb_netdev ntb_transport ntb_hw_epf 2>/dev/null
+			d=$(ntb_dev) && echo 1 > $d/remove
+			echo 1 > /sys/bus/pci/rescan
+			modprobe ntb_hw_epf; modprobe ntb_netdev
+			down=0
+		fi
+	fi
+	sleep 5
+done

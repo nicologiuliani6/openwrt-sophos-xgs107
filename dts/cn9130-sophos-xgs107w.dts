@@ -20,6 +20,35 @@
 	compatible = "sophos,xgs107w-npu", "marvell,cn9130",
 		     "marvell,armada-ap807-quad", "marvell,armada-ap807";
 
+	/* VBUS switches of the two xHCI ports, GPIOs taken from the stock DT */
+	cp0_reg_usb3_vbus0: regulator-usb3-vbus0 {
+		compatible = "regulator-fixed";
+		regulator-name = "cp0-xhci0-vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		enable-active-high;
+		gpio = <&cp0_gpio1 9 GPIO_ACTIVE_HIGH>;
+	};
+
+	cp0_reg_usb3_vbus1: regulator-usb3-vbus1 {
+		compatible = "regulator-fixed";
+		regulator-name = "cp0-xhci1-vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		enable-active-high;
+		gpio = <&cp0_gpio2 21 GPIO_ACTIVE_HIGH>;
+	};
+
+	cp0_usb3_phy0: usb-phy-0 {
+		compatible = "usb-nop-xceiv";
+		vcc-supply = <&cp0_reg_usb3_vbus0>;
+	};
+
+	cp0_usb3_phy1: usb-phy-1 {
+		compatible = "usb-nop-xceiv";
+		vcc-supply = <&cp0_reg_usb3_vbus1>;
+	};
+
 	chosen {
 		stdout-path = "serial0:115200n8";
 	};
@@ -228,4 +257,59 @@
 			};
 		};
 	};
+};
+
+/*
+ * PCIe controller 0 is wired to the x86 host and left by the stock U-Boot in
+ * endpoint mode with the link up. Drive it as a DesignWare endpoint so that
+ * pci-epf-vntb can give the host a virtual Ethernet (ntb_netdev).
+ * dbi/dbi2 offsets and the 32 GB outbound window come from the stock DT
+ * (pcie-ep@600000 and pci-ep-uio host-map).
+ */
+&cp0_pcie0 {
+	/delete-property/ device_type;
+	/delete-property/ msi-parent;
+	/delete-property/ bus-range;
+	/delete-property/ ranges;
+	/delete-property/ interrupt-map;
+	/delete-property/ interrupt-map-mask;
+	/delete-property/ #address-cells;
+	/delete-property/ #size-cells;
+	/delete-property/ #interrupt-cells;
+	/delete-property/ num-lanes;
+	/delete-property/ interrupts;
+	/delete-property/ clock-names;
+	/delete-property/ clocks;
+	compatible = "snps,dw-pcie-ep";
+	reg = <0 0xf2600000 0 0x1000>,
+	      <0 0xf2604000 0 0x1000>,
+	      <0x80 0x0 0x0 0x10000000>,
+	      <0 0xf2608000 0 0x1000>;
+	reg-names = "dbi", "dbi2", "addr_space", "vendor";
+	clocks = <&cp0_clk 1 13>;
+	clock-names = "core";
+	max-functions = /bits/ 8 <1>;
+	num-ib-windows = <8>;
+	num-ob-windows = <8>;
+	status = "okay";
+};
+
+&cp0_utmi {
+	status = "okay";
+};
+
+&cp0_usb3_0 {
+	status = "okay";
+	usb-phy = <&cp0_usb3_phy0>;
+	phys = <&cp0_utmi0>;
+	phy-names = "utmi";
+	dr_mode = "host";
+};
+
+&cp0_usb3_1 {
+	status = "okay";
+	usb-phy = <&cp0_usb3_phy1>;
+	phys = <&cp0_utmi1>;
+	phy-names = "utmi";
+	dr_mode = "host";
 };

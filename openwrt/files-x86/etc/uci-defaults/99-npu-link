@@ -1,0 +1,32 @@
+#!/bin/sh
+# The x86 has no NIC of its own: its network is the NTB Ethernet (ntb0) to the
+# NPU, which is the router. Bridge it with the Wi-Fi AP under LAN, address
+# 192.168.1.2 (the NPU is 192.168.1.1 and serves DHCP for everyone).
+cat > /etc/config/network <<'EOT'
+config interface 'loopback'
+	option device 'lo'
+	option proto 'static'
+	option ipaddr '127.0.0.1'
+	option netmask '255.0.0.0'
+
+config device
+	option name 'br-lan'
+	option type 'bridge'
+	list ports 'ntb0'
+
+config interface 'lan'
+	option device 'br-lan'
+	option proto 'static'
+	option ipaddr '192.168.1.2'
+	option netmask '255.255.255.0'
+	option gateway '192.168.1.1'
+	list dns '192.168.1.1'
+EOT
+uci -q batch <<'EOT'
+set dhcp.lan.ignore='1'
+delete dhcp.lan.dhcpv6
+delete dhcp.lan.ra
+commit dhcp
+EOT
+/etc/init.d/ntb-link enable
+exit 0
