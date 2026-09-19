@@ -404,9 +404,45 @@ hung x86, and WAN input is firewalled. After a power cycle:
 - or read the NPU console via x86 `ttyS2` once SFOS is back (it will be
   in failsafe, NPU unreachable = reason 1, no reflash).
 
+### 18. After a power cycle: verified from inside OpenWrt
+
+- The user power-cycled the XGS. **OpenWrt booted on its own from eMMC**;
+  the WAN answered within seconds.
+- SFOS on the x86 now hangs indefinitely at
+  `Loading network interface drivers...`, waiting for its NPU. It does not
+  reach failsafe, so the x86 `ttyS2` console path is gone while OpenWrt runs.
+  The NPU does not depend on the x86.
+- PC plugged into **panel port 1**: DHCP lease `192.168.1.133` from
+  OpenWrt, and **internet through OpenWrt (LAN→WAN routing + NAT
+  works)**.
+- Over SSH (`root@192.168.1.1`):
+  - board `sophos,xgs107w-npu`, model `Sophos XGS 107w (CN9130 NPU)`,
+    kernel 6.18.52;
+  - `root=/dev/mmcblk0p1 rw`, ext4 489 MiB, 6 % used;
+  - U-Boot `bootcmd=run bootcmd_owrt; run bootcmd_stock`;
+  - **2 GB RAM** usable (no stock reservations when booted from U-Boot);
+  - p1 and p2 up at 1000 Mb/s, `eth0` at 10000 Mb/s, p3-p8 and sfp no
+    carrier; MACs LAN `…:62`, WAN `…:63`, `eth0` `…:6b` (the stock
+    backplane MAC);
+  - `PTP clock unavailable, hardware timestamping disabled`, as the patch
+    intends;
+  - WAN 192.168.88.155, LAN 192.168.1.1.
+- **iperf3 PC ↔ OpenWrt over LAN port 1: 941 Mbit/s up, 939 Mbit/s down.**
+
 ---
 
-## Open questions after session 1
+## Open items
+
+- [ ] LAN↔WAN routing throughput with a wired host on the WAN side (only
+      host-terminated tests so far).
+- [ ] Forwarding between two LAN ports (hardware-offloaded in the switch).
+- [ ] SFP "F1" (needs a module), port LEDs (PCA9555 mapping).
+- [ ] TCP retransmits OpenWrt→host (flow control is off on the ports).
+- [ ] The x86: SFOS hangs without its NPU. Replace it with a Linux (Wi-Fi
+      ath10k) or leave it.
+- [ ] Upstream: DTS + mv88e6xxx PTP patch to Linux, device to OpenWrt.
+
+## Open questions after session 1 (historical)
 
 - [ ] Why is `NPU COM` silent? Low priority now: the NPU console is
       reachable as x86 `/dev/ttyS2`, and the stock NPU kernel does log to
