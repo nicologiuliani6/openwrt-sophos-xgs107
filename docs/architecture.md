@@ -60,9 +60,9 @@ eMMC: p1 500 MiB OpenWrt | p2 1.5 GiB stock | p3 1.5 GiB stock | p4 100 MiB /per
 
 If OpenWrt's kernel cannot be loaded, U-Boot runs the stock command. A
 kernel that loads but hangs does not fall back: recovery is then through
-the U-Boot prompt ([recovery.md](recovery.md)). The switch reset is done by
-the U-Boot script rather than by the driver because the 88E6193X needs about
-two seconds after reset, longer than `mv88e6xxx` waits.
+the U-Boot prompt ([recovery.md](recovery.md)). The switch is reset by
+U-Boot (`sw_init_p0`) and again by the driver (`reset-gpios` in the device
+tree).
 
 ## x86 disk layout
 

@@ -18,8 +18,7 @@ NOR, GPIO expander, SFP, the switch with eight DSA ports). The PCIe endpoint,
 USB and LED nodes of `openwrt/npu/dts/cn9130-sophos-xgs107w.dts` are OpenWrt
 only.
 
-The switch reset is not `reset-gpios` on purpose: the 88E6193X needs about two
-seconds after reset, longer than `mv88e6xxx` waits, so the boot loader does it.
+The switch's reset line (CP GPIO2 pin 17) is described with `reset-gpios`.
 
 ## Checks
 

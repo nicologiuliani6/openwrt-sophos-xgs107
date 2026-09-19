@@ -16,11 +16,6 @@ and the PCIe link to the x86 host (the CN9130 acts as a PCIe endpoint
 towards it, which needs endpoint support that is not part of this series)
 are not described.
 
-The reset line of the switch is not passed to the mv88e6xxx driver as
-reset-gpios, because the 88E6193X needs about two seconds after a reset,
-much longer than the driver waits. The boot loader resets it instead.
-The details are in patch 3.
-
 Tested on an XGS 107w with Linux 6.18: boot from eMMC, eMMC and SPI NOR
 access, the mvpp2 link to the switch at 10 Gb/s, the 88E6193X probing with
 its eight user ports, and 936 Mbit/s through a front port. The SFP cage

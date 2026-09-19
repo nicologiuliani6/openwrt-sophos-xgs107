@@ -11,7 +11,7 @@
 | `ntb_hw_epf: Unsupported MW count: 32…` | the NPU side's BAR memory is not 1 MiB aligned: NPU kernel without patch 951 |
 | `Failed to configure doorbell` (`-110`) | the endpoint does not see the host's writes: BAR alignment (951) or a `dma-coherent` endpoint node |
 | NPU ↔ x86 only 5–15 Mbit/s | `transport_mtu=2048` is missing on one side: `cat /sys/module/ntb_transport/parameters/transport_mtu` must be 2048 on both (it is set in `/etc/modules.d/ntb-*` by the first-boot script) |
-| NPU: `88e6xxx … -ETIMEDOUT` or the switch does not probe | the switch was not reset by U-Boot (`run sw_init_p0`): check `bootcmd_owrt` |
+| NPU: `88e6xxx … -ETIMEDOUT` or the switch does not probe | the switch did not come out of reset: check `reset-gpios` (CP GPIO2 pin 17) in the device tree and `run sw_init_p0` in `bootcmd_owrt` |
 | NPU `mv88e6085 … PTP clock unavailable` | expected; patch 950 lets the switch work without hardware timestamping |
 | NPU boots into a RAM root, `/boot` missing, config lost | the wrong kernel was installed: the `Image` out of a full OpenWrt build is the *initramfs* kernel (28 MB). `build/mk-emmc-slot.sh` uses the plain one (14 MB); when replacing a kernel by hand use the one from `linux-mvebu_cortexa72/sophos_xgs107w-kernel.bin` |
 | The x86 reboots when the NPU restarts | expected, see [architecture.md](architecture.md) |
