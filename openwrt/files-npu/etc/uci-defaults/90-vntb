@@ -1,3 +1,5 @@
 #!/bin/sh
 /etc/init.d/vntb enable
+# 2 KB transport frames: the default 64 KB gives a 1 MB window only 15 slots (12 Mbit/s)
+sed -i 's/^ntb_transport$/ntb_transport transport_mtu=2048/' /etc/modules.d/ntb-netdev
 exit 0

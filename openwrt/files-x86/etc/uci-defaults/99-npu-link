@@ -29,4 +29,5 @@ delete dhcp.lan.ra
 commit dhcp
 EOT
 /etc/init.d/ntb-link enable
+sed -i 's/^ntb_transport$/ntb_transport transport_mtu=2048/' /etc/modules.d/ntb-epf
 exit 0

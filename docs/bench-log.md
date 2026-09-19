@@ -485,8 +485,9 @@ Details of the link in [x86-npu-link.md](x86-npu-link.md).
 - Result: `ntb0` on both sides, x86 = 192.168.1.2 on the NPU LAN, ping
   1.3 ms, Internet from the x86, x86 LuCI/SSH reachable from a LAN port.
   Both boot orders work (`ntb-link-wait` on the x86). NPU reset ⇒ x86 reboots.
-- Throughput first measured at 5-15 Mbit/s: the endpoint finds host doorbells
-  by polling and HZ=100 rounded 5 ms to 10 ms. Patch (1 ms) + HZ=1000.
+- Throughput first measured at 5-15 Mbit/s. Cause: 64 KB transport frames give
+  15 slots in the 1 MB window. `transport_mtu=2048` on both sides: 630 Mbit/s
+  NPU→x86, 1.68 Gbit/s x86→NPU. Also 1 ms doorbell polling + HZ=1000.
 - USB: both xHCI ports of the CN9130 enabled (VBUS GPIOs from the stock DT);
   controllers enumerate. **Not tried with a device.** The x86 side sees only
   its internal hubs (MCP2210), so the front USB-A is probably the NPU's.

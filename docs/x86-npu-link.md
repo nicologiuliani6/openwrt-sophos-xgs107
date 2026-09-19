@@ -53,8 +53,11 @@ silently do nothing; an OpenWrt full build turns `build_dir/.../Image` into the
 
 - Resetting the NPU while the x86 has the NTB bound reboots the x86 (the
   PCIe link disappears under it). It comes back on its own and re-links.
-- The NPU firmware side of the link is 1 MB BARs and one queue pair: ~ a few
-  hundred Mbit/s is expected, not measured yet.
+- Throughput (iperf3, NPU↔x86): **630 Mbit/s NPU→x86, 1.68 Gbit/s x86→NPU**.
+  It was 12 and 6 Mbit/s until `ntb_transport transport_mtu=2048` (module
+  option, both sides): with the default 64 KB frames the 1 MB window has only 15
+  slots and every small packet waits for a doorbell round trip. Doorbells
+  x86→NPU are polled every 1 ms (`patches/954`, HZ=1000).
 - No root password on either side by choice (testing). SSH key of the
   builder is installed on the x86.
 
