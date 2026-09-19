@@ -1,0 +1,8 @@
+{
+	"luci-mod-x86-module": {
+		"description": "Grant access to the x86 module page",
+		"read": {
+			"ubus": { "network.interface.lan": [ "status" ] }
+		}
+	}
+}

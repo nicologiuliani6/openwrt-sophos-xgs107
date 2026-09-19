@@ -14,6 +14,7 @@
 
 #include "cn9130.dtsi"
 #include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/leds/common.h>
 
 / {
 	model = "Sophos XGS 107w (CN9130 NPU)";
@@ -47,6 +48,128 @@
 	cp0_usb3_phy1: usb-phy-1 {
 		compatible = "usb-nop-xceiv";
 		vcc-supply = <&cp0_reg_usb3_vbus1>;
+	};
+
+	/*
+	 * Port LEDs: two PCA9555 pins per RJ45 port (stock "gpio:3:<hi>:<lo>",
+	 * port n = pins 2n-1 / 2n-2). Which pin is which colour and the pin
+	 * polarity are not documented; active-low is the usual sink wiring and
+	 * has to be confirmed by eye (README, "LEDs").
+	 */
+	leds {
+		compatible = "gpio-leds";
+
+		led-lan1-a {
+			function = LED_FUNCTION_LAN;
+			function-enumerator = <1>;
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&led_gpio 0 GPIO_ACTIVE_LOW>;
+		};
+
+		led-lan1-b {
+			function = LED_FUNCTION_LAN;
+			function-enumerator = <1>;
+			color = <LED_COLOR_ID_AMBER>;
+			gpios = <&led_gpio 1 GPIO_ACTIVE_LOW>;
+		};
+
+		led-lan2-a {
+			function = LED_FUNCTION_LAN;
+			function-enumerator = <2>;
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&led_gpio 2 GPIO_ACTIVE_LOW>;
+		};
+
+		led-lan2-b {
+			function = LED_FUNCTION_LAN;
+			function-enumerator = <2>;
+			color = <LED_COLOR_ID_AMBER>;
+			gpios = <&led_gpio 3 GPIO_ACTIVE_LOW>;
+		};
+
+		led-lan3-a {
+			function = LED_FUNCTION_LAN;
+			function-enumerator = <3>;
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&led_gpio 4 GPIO_ACTIVE_LOW>;
+		};
+
+		led-lan3-b {
+			function = LED_FUNCTION_LAN;
+			function-enumerator = <3>;
+			color = <LED_COLOR_ID_AMBER>;
+			gpios = <&led_gpio 5 GPIO_ACTIVE_LOW>;
+		};
+
+		led-lan4-a {
+			function = LED_FUNCTION_LAN;
+			function-enumerator = <4>;
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&led_gpio 6 GPIO_ACTIVE_LOW>;
+		};
+
+		led-lan4-b {
+			function = LED_FUNCTION_LAN;
+			function-enumerator = <4>;
+			color = <LED_COLOR_ID_AMBER>;
+			gpios = <&led_gpio 7 GPIO_ACTIVE_LOW>;
+		};
+
+		led-lan5-a {
+			function = LED_FUNCTION_LAN;
+			function-enumerator = <5>;
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&led_gpio 8 GPIO_ACTIVE_LOW>;
+		};
+
+		led-lan5-b {
+			function = LED_FUNCTION_LAN;
+			function-enumerator = <5>;
+			color = <LED_COLOR_ID_AMBER>;
+			gpios = <&led_gpio 9 GPIO_ACTIVE_LOW>;
+		};
+
+		led-lan6-a {
+			function = LED_FUNCTION_LAN;
+			function-enumerator = <6>;
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&led_gpio 10 GPIO_ACTIVE_LOW>;
+		};
+
+		led-lan6-b {
+			function = LED_FUNCTION_LAN;
+			function-enumerator = <6>;
+			color = <LED_COLOR_ID_AMBER>;
+			gpios = <&led_gpio 11 GPIO_ACTIVE_LOW>;
+		};
+
+		led-lan7-a {
+			function = LED_FUNCTION_LAN;
+			function-enumerator = <7>;
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&led_gpio 12 GPIO_ACTIVE_LOW>;
+		};
+
+		led-lan7-b {
+			function = LED_FUNCTION_LAN;
+			function-enumerator = <7>;
+			color = <LED_COLOR_ID_AMBER>;
+			gpios = <&led_gpio 13 GPIO_ACTIVE_LOW>;
+		};
+
+		led-lan8-a {
+			function = LED_FUNCTION_LAN;
+			function-enumerator = <8>;
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&led_gpio 14 GPIO_ACTIVE_LOW>;
+		};
+
+		led-lan8-b {
+			function = LED_FUNCTION_LAN;
+			function-enumerator = <8>;
+			color = <LED_COLOR_ID_AMBER>;
+			gpios = <&led_gpio 15 GPIO_ACTIVE_LOW>;
+		};
 	};
 
 	chosen {

@@ -1,0 +1,13 @@
+{
+	"admin/network/x86-module": {
+		"title": "Wi-Fi / x86 module",
+		"order": 90,
+		"action": {
+			"type": "view",
+			"path": "x86-module"
+		},
+		"depends": {
+			"acl": [ "luci-mod-x86-module" ]
+		}
+	}
+}

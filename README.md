@@ -45,6 +45,8 @@ Target: **mainline Linux, then OpenWrt, running on the CN9130 itself**.
 
 The x86 (and its Wi-Fi) is a later, optional phase.
 
+**Status 2026-09-19 (late):** the x86 (OpenWrt, Wi-Fi radio) is connected to the NPU through the PCIe endpoint as a virtual Ethernet, see [docs/x86-npu-link.md](docs/x86-npu-link.md).
+
 **Status 2026-09-19:**
 - mainline Linux and **OpenWrt run on the CN9130** (booted from RAM with
   kexec), with all 8 ports + SFP via DSA;

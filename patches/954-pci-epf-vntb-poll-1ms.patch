@@ -1,0 +1,19 @@
+From: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
+Subject: [PATCH] PCI: endpoint: pci-epf-vntb: poll the host commands and doorbells every 1 ms
+
+The host has no way to interrupt the endpoint here, so doorbells are found by
+polling. With HZ=100 the 5 ms period rounds up to a whole tick (10 ms) and
+caps a bulk transfer at a few Mbit/s.
+
+---
+--- a/drivers/pci/endpoint/functions/pci-epf-vntb.c
++++ b/drivers/pci/endpoint/functions/pci-epf-vntb.c
+@@ -319,7 +319,7 @@
+ 
+ reset_handler:
+ 	queue_delayed_work(kpcintb_workqueue, &ntb->cmd_handler,
+-			   msecs_to_jiffies(5));
++			   msecs_to_jiffies(1));
+ }
+ 
+ /**

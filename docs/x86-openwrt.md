@@ -17,7 +17,7 @@ independent.
 | Console | RJ45 or micro-USB (PL2303), **38400 8N1**; GRUB and the kernel both use it |
 | Wi-Fi | `02:00.0 [168c:003c]`, `ath10k` with the CT firmware, 2.4 + 5 GHz (VHT80) |
 | USB | xHCI + EHCI; RTL8152 / AX88179 / CDC USB Ethernet drivers are in the image |
-| **Network** | **none built in.** The x86's only path to the ports was the Sophos-proprietary NPU link, which does not exist under OpenWrt. It needs a USB Ethernet dongle (cable to a switch port) or Wi-Fi. |
+| **Network** | `ntb0`, a virtual Ethernet to the NPU over PCIe ([x86-npu-link.md](x86-npu-link.md)); 192.168.1.2 |
 
 ## Layout on disk
 
@@ -114,14 +114,22 @@ and has **no encryption** on purpose. To use it, set a WPA2/WPA3 key first
 `…key=<password>`, `…ssid=<name>`, `…disabled=0`, `wifi reload`). Without a
 USB Ethernet dongle to the switch, clients of that AP reach only the x86.
 
+## Network (since 2026-09-19)
+
+The x86 no longer needs a dongle: it reaches the switch through the PCIe
+link to the NPU, see [x86-npu-link.md](x86-npu-link.md). `ntb0` is bridged in
+`br-lan`, address 192.168.1.2, gateway/DNS 192.168.1.1, its own DHCP server off.
+The NPU's LuCI has a menu entry *Network → Wi-Fi / x86 module* that links
+to the x86's wireless page. The Wi-Fi radio (`radio0`, QCA988x, 5 GHz ch 36
+VHT80, country IT) is up; the AP is defined but **disabled and open**: set
+SSID, WPA key and enable it in LuCI (it was tested once with WPA2:
+`AP-ENABLED`).
+
 ## Not done / open
 
-- `resize2fs` is not in the image, so the root filesystem is still the
-  512 MB of the image inside a 3.79 GB partition (447 MB free). Add the
-  `resize2fs` package to the build and run it once.
-- No root password (console only, no network). Set one.
-- No network path between x86 and switch. A USB Ethernet dongle on the x86
-  plus a cable to a switch LAN port would give the x86 (and its Wi-Fi) a
-  wired uplink; the drivers are already in the image.
+- The root filesystem is 3.79 GB partition with a 620 MB ext4: online
+  `resize2fs` stops at "add group #5" (the image has no reserved GDT
+  blocks). 570 MB are free; growing needs an offline resize or a bigger image.
+- No root password.
 - Recovery to SFOS on the x86 would need a USB stick with the Sophos
   installer (public download, see [sophos-firmware.md](sophos-firmware.md)).

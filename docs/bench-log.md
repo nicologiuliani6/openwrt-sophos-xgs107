@@ -472,6 +472,33 @@ the x86, mainly for its Wi-Fi. Full write-up in
 - Not done: `resize2fs` (not in the image), root password, a network
   path between x86 and switch (needs a USB Ethernet dongle).
 
+
+## 20. x86 ↔ NPU link, USB, LEDs (2026-09-19)
+
+Details of the link in [x86-npu-link.md](x86-npu-link.md).
+
+- The CN9130 PCIe endpoint (DesignWare) + `pci-epf-vntb` on the NPU and
+  `ntb_hw_epf`/`ntb_netdev` on the x86 give a virtual Ethernet. Three bugs:
+  BAR memory needs 1 MB alignment, no `dma-coherent` on the endpoint, MSI
+  instead of MSI-X. Found with an iATU register dump and by decompiling the
+  stock `armada_pcie_ep_*` functions (`vmlinux-to-elf` + `objdump`).
+- Result: `ntb0` on both sides, x86 = 192.168.1.2 on the NPU LAN, ping
+  1.3 ms, Internet from the x86, x86 LuCI/SSH reachable from a LAN port.
+  Both boot orders work (`ntb-link-wait` on the x86). NPU reset ⇒ x86 reboots.
+- Throughput first measured at 5-15 Mbit/s: the endpoint finds host doorbells
+  by polling and HZ=100 rounded 5 ms to 10 ms. Patch (1 ms) + HZ=1000.
+- USB: both xHCI ports of the CN9130 enabled (VBUS GPIOs from the stock DT);
+  controllers enumerate. **Not tried with a device.** The x86 side sees only
+  its internal hubs (MCP2210), so the front USB-A is probably the NPU's.
+- LEDs: PCA9555 pins exposed as gpio-leds `green:lan-N` / `amber:lan-N`,
+  polarity active-low guessed, netdev trigger on the green ones. Needs a look.
+- Wi-Fi: radio up on the x86; AP tested once with WPA2 (`AP-ENABLED`), then
+  put back to disabled. NPU LuCI has *Network → Wi-Fi / x86 module*.
+- TCP retransmits NPU→host (~6000 in 8 s at 940 Mbit/s) come from the 10G
+  conduit into the 1G switch ports; pause frames on the conduit made it
+  worse, left alone.
+- `resize2fs` online fails on the x86 image ("add group #5").
+
 ---
 
 ## Open items
@@ -479,10 +506,11 @@ the x86, mainly for its Wi-Fi. Full write-up in
 - [ ] LAN↔WAN routing throughput with a wired host on the WAN side (only
       host-terminated tests so far).
 - [ ] Forwarding between two LAN ports (hardware-offloaded in the switch).
-- [ ] SFP "F1" (needs a module), port LEDs (PCA9555 mapping).
-- [ ] TCP retransmits OpenWrt→host (flow control is off on the ports).
+- [ ] SFP "F1" (needs a module), check the port LEDs by eye (§20).
+- [ ] USB on the NPU with a real device (§20).
+- [ ] TCP retransmits OpenWrt→host (§20: pause frames did not help).
 - [x] The x86: replaced SFOS by OpenWrt (see §19); still open there:
-      resize2fs, a root password, an uplink for the Wi-Fi (USB dongle).
+      a root password, resize2fs (§20). The uplink is solved (§20).
 - [ ] Upstream: DTS + mv88e6xxx PTP patch to Linux, device to OpenWrt.
 
 ## Open questions after session 1 (historical)
