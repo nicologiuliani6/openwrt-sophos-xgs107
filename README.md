@@ -53,7 +53,12 @@ The x86 (and its Wi-Fi) is a later, optional phase.
   U-Boot (2026-09-19). Stock Sophos stays as the U-Boot fallback.
 - Verified after a power cycle: LAN 192.168.1.1 (panel port 1, 3-8, SFP),
   WAN DHCP on panel port 2, NAT routing, 941 Mbit/s line rate, 2 GB RAM.
-- The x86 SFOS now hangs at boot without its NPU; OpenWrt does not need it.
+- **The x86 runs OpenWrt too** (2026-09-19), from its internal disk via the
+  existing GRUB; Wi-Fi card detected (ath10k). SFOS is not needed any more.
+  See [docs/x86-openwrt.md](docs/x86-openwrt.md). The x86 has no network of
+  its own (needs a USB Ethernet dongle to a switch port for an uplink).
+- Linux upstream patches (3 DT + 1 driver) are prepared but **not sent**:
+  [upstream/README.md](upstream/README.md).
 
 Details: [docs/bench-log.md](docs/bench-log.md) §11-16,
 [openwrt/](openwrt/), [docs/openwrt-install.md](docs/openwrt-install.md).

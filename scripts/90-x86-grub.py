@@ -23,8 +23,14 @@ class Screen:
     def __init__(self):
         self.g = [[' '] * COLS for _ in range(ROWS)]
         self.r = self.c = 0
+        self.carry = ''                  # an escape sequence cut by a read() boundary
 
     def feed(self, text):
+        text = self.carry + text
+        self.carry = ''
+        m = re.search(r'\x1b(\[[0-9;?]*)?$', text)
+        if m:
+            self.carry, text = text[m.start():], text[:m.start()]
         i = 0
         while i < len(text):
             m = CSI.match(text, i)
@@ -59,6 +65,24 @@ class Screen:
         for n, l in enumerate(self.lines()):
             if l.strip():
                 print(f'{n:2d}| {l}')
+
+
+def port_holders(pattern):
+    """PIDs (other than us) that have the serial device open."""
+    m = sorted(glob.glob(pattern))
+    if not m:
+        return []
+    node, out = os.path.realpath(m[0]), []
+    for d in glob.glob('/proc/[0-9]*/fd/*'):
+        pid = int(d.split('/')[2])
+        if pid == os.getpid():
+            continue
+        try:
+            if os.path.realpath(d) == node:
+                out.append(pid)
+        except OSError:
+            pass
+    return out
 
 
 def replay(path):
@@ -141,22 +165,103 @@ def main():
     ap.add_argument('--append', default='')
     ap.add_argument('--show', action='store_true')
     ap.add_argument('--replay')
+    ap.add_argument('--cmdline', metavar='EXTRA',
+                    help="use GRUB's command line instead of the editor: types the stock linux line "
+                         "(without 'quiet') plus EXTRA, verifies it on screen, then boot")
+    ap.add_argument('--sysrq-reboot', action='store_true',
+                    help='first send BREAK + "b" (SysRq reboot) to the running x86, then catch its GRUB')
+    ap.add_argument('--at-menu', action='store_true',
+                    help='GRUB is already showing its menu (countdown stopped): do not wait for it, '
+                         'select the last entry and edit it. Waits until no other process (picocom) holds the port.')
     ap.add_argument('--wait', type=int, default=900, help='seconds to wait for GRUB')
     ap.add_argument('--log', default=f'logs/x86-grub-{time.strftime("%Y%m%d-%H%M%S")}.log')
     a = ap.parse_args()
     if a.replay:
         return replay(a.replay)
-    if not a.append and not a.show:
-        ap.error('give --append TEXT or --show')
+    if not a.append and not a.show and a.cmdline is None:
+        ap.error('give --append TEXT, --cmdline EXTRA or --show')
 
+    if a.at_menu:
+        print('waiting for the console to be free (close picocom: Ctrl-A then Ctrl-X)...', flush=True)
+        while port_holders(a.dev):
+            time.sleep(0.5)
     p = Port(a.dev, a.baud)
-    print('waiting for the GRUB menu (power the XGS on now)...', flush=True)
-    t0 = time.time()
-    while 'GNU GRUB' not in p.raw:
-        p.pump(0.5)
-        if time.time() - t0 > a.wait:
-            sys.exit('no GRUB menu seen')
-    p.send('e')
+    if a.at_menu:
+        def last_entry_selected():
+            return any(re.search(r'\*\s*19_5_4_718', l) for l in p.screen.lines())
+        for attempt in range(4):
+            p.send('\x1b'); p.pump(2.5)      # leave the editor if open; GRUB waits ~1s to tell Esc from a sequence
+            for _ in range(4):                # Down: the last entry is 19_5_4_718 (SFOS 19.5.4)
+                p.send('\x1b[B'); p.pump(0.7)
+            if last_entry_selected():
+                break
+        if not last_entry_selected():
+            p.screen.show()
+            sys.exit('cannot select the 19_5_4_718 entry, not editing')
+        p.raw += 'GNU GRUB'
+    else:
+        if a.sysrq_reboot:
+            print('sending SysRq-b (BREAK then b) to the x86...', flush=True)
+            termios.tcsendbreak(p.fd, 0); time.sleep(0.4); p.send('b')
+            p.raw = ''
+        print('waiting for the GRUB menu (power the XGS on now)...', flush=True)
+        t0 = time.time()
+        while 'GNU GRUB' not in p.raw:
+            p.pump(0.5)
+            if time.time() - t0 > a.wait:
+                sys.exit('no GRUB menu seen')
+    if a.cmdline is not None:
+        base = ('linux /19_5_4_718 console=tty0 console=ttyS0,38400n8 pcie_aspm.policy=performance '
+                'amd_iommu=on iommu=pt libata.force=noncq acpi_enforce_resources=lax '
+                'crashkernel=3800M-6G:80M,6G-16G:128M,16G-:192M')
+        line = (base + ' ' + a.cmdline).strip()
+        def prompt_open():
+            return any(l.lstrip().startswith('grub>') for l in p.screen.lines())
+        def typed_ok():
+            rows = [l for l in p.screen.lines() if l.strip()]
+            i = next((n for n in range(len(rows) - 1, -1, -1) if rows[n].lstrip().startswith('grub>')), None)
+            # GRUB echoes each character twice, which leaves an extra one at the edges of the
+            # line: require the whole expected line inside, allowing only edge leftovers.
+            return i is not None and line.replace(' ', '') in ''.join(rows[i:]).replace('grub>', '', 1).replace(' ', '')
+        for _ in range(4):
+            p.send('c')
+            t1 = time.time()
+            while time.time() - t1 < 9 and not prompt_open():
+                p.pump(0.5)
+            if prompt_open():
+                break
+        if not prompt_open():
+            p.screen.show(); sys.exit('no grub> prompt')
+        print('grub> prompt open; typing the linux line', flush=True)
+        for ch in line:
+            p.send(ch, gap=0); p.pump(0.06)
+        p.pump(1.5)
+        p.screen.show()
+        if not typed_ok():
+            open(a.log, 'w').write(p.raw)
+            sys.exit('the typed line does not match, NOT pressing Enter (clear it with Ctrl-U)')
+        p.send('\r'); p.pump(3)
+        print('--- after linux'); p.screen.show()
+        if any('error' in l.lower() for l in p.screen.lines()):
+            open(a.log, 'w').write(p.raw)
+            sys.exit('GRUB reported an error for the linux command, not booting')
+        p.raw = ''
+        for ch in 'boot':
+            p.send(ch, gap=0); p.pump(0.1)
+        p.send('\r'); p.pump(70)
+        open(a.log, 'w').write(p.raw)
+        tail = re.sub(r'\x1b\[[0-9;?]*[A-Za-z]', '', p.raw).replace('\r', '')
+        print('--- console after boot (tail)'); print(tail[-3500:])
+        return
+    def editor_open():
+        return any("setparams" in l for l in p.screen.lines())
+    for _ in range(4):                        # a lost 'e' is retried, but only after a long wait:
+        p.send('e')                           # a second 'e' inside an open editor would be typed into it
+        t1 = time.time()
+        while time.time() - t1 < 9 and not editor_open():
+            p.pump(0.5)
+        if editor_open():
+            break
     p.pump(2)
     lines = p.screen.lines()
     li = next((n for n, l in enumerate(lines) if re.search(r'\blinux\b', l) and 'Minimal' not in l), None)
@@ -164,19 +269,31 @@ def main():
     if li is None:
         open(a.log, 'w').write(p.raw)
         sys.exit('no linux line on the edit screen')
-    for _ in range(40):                      # walk the cursor down to it
-        if p.screen.r >= li:
-            break
-        p.send('\x1b[B'); p.pump(0.3)
+    # The editor starts on the first line. Wrapped lines end with a backslash before the
+    # border, so count LOGICAL lines from the first box row down to the linux row.
+    L = p.screen.lines()
+    top = next(n for n, l in enumerate(L) if l.lstrip().startswith('/---'))
+    def wraps(n):
+        return L[n].rstrip().endswith('\\|')
+    downs = sum(1 for n in range(top + 1, li + 1) if n == top + 1 or not wraps(n - 1)) - 1
+    print(f'linux is logical line {downs} of the entry: pressing Down {downs} times')
+    for _ in range(downs):
+        p.send('\x1b[B'); p.pump(0.5)
     if a.show:
         p.send('\x1b'); p.pump(1)
         open(a.log, 'w').write(p.raw)
         print(f'(entry only shown; GRUB resumes the countdown; log {a.log})')
         return
-    p.send('\x05'); p.pump(0.3)              # Ctrl-E: end of line
-    p.send(' ' + a.append); p.pump(1)
+    p.send('\x05'); p.pump(0.5)              # Ctrl-E: end of line
+    for ch in ' ' + a.append:                 # GRUB drops characters typed faster than it redraws
+        p.send(ch, gap=0); p.pump(0.35)
+    p.pump(1)
     print('--- after edit'); p.screen.show()
-    if a.append not in ''.join(p.screen.lines()[li:li + 3]):
+    def content(row):                         # text inside the box, without the wrap marker
+        r = p.screen.lines()[row]
+        r = r[r.find('|') + 1:r.rfind('|')] if r.count('|') >= 2 else r
+        return r[:-1] if r.endswith('\\') else r
+    if not content(top + 1).startswith('setparams') or a.append not in ''.join(content(n) for n in range(li, li + 5)):
         open(a.log, 'w').write(p.raw)
         sys.exit('appended text not visible on the linux line, not booting')
     p.send('\x18')                            # Ctrl-X: boot

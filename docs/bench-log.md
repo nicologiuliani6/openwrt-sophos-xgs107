@@ -429,6 +429,49 @@ hung x86, and WAN input is firewalled. After a power cycle:
   - WAN 192.168.88.155, LAN 192.168.1.1.
 - **iperf3 PC ↔ OpenWrt over LAN port 1: 941 Mbit/s up, 939 Mbit/s down.**
 
+### 19. The x86 side: OpenWrt from the internal disk (2026-09-19)
+
+The user decided SFOS is useless (and end-of-life) and asked for Linux on
+the x86, mainly for its Wi-Fi. Full write-up in
+[x86-openwrt.md](x86-openwrt.md). Outline and lessons:
+
+- Built OpenWrt x86/64 (Wi-Fi ath10k, USB Ethernet drivers, LuCI, GRUB and
+  kernel console at 38400). The first build failed only because the
+  copied tree carried the original tree's absolute paths (two copies of
+  a header with an include guard); fixed by rewriting the paths.
+- Tested in QEMU first: UEFI image boots, and the exact real-boot case
+  (bare kernel, root on an AHCI SATA disk, no initrd) works.
+- The x86 has no display and no network of its own; its disk is UEFI +
+  GRUB with an MBR that lists only two partitions. Getting in required
+  driving GRUB over the serial console (`scripts/90-x86-grub.py`).
+  GRUB's `e` editor loses characters at 38400 baud; its command line
+  (`c`) works.
+- SFOS ignores `init=` and `rdinit=`, but `module_blacklist=` of the
+  Sophos NPU modules lets it boot to a login without the switch (no
+  network then).
+- **First install attempts never touched the disk.** `dd of=/dev/sda8`
+  on SFOS created a regular file in RAM (`/dev/sda8` does not exist there;
+  the node is `/dev/swap`); the verification read the same file. The
+  OpenWrt kernel then booted from GRUB but only saw `sda1`/`sda2`.
+- SFOS creates most partitions at run time, so a stock kernel cannot
+  see them. Fix: a real MBR entry #3 for the old swap area (sector 0
+  backed up), `root=/dev/sda3`.
+- SFOS `mkswap`s that area at each boot: never boot SFOS between writing
+  and the final reboot.
+- Final install in one SFOS session (`scripts/95-x86-install.sh`), with
+  the stock NPU running for network: write to `/dev/swap`, **verify on the
+  raw disk after dropping caches**, MBR entry, kernel to `/boot/openwrt`,
+  GRUB entry (default), NPU kernel restored. Then both sides were
+  rebooted (NPU delayed by 8 s).
+- Result: the x86 boots OpenWrt from `sda3` (ext4, journal recovered on
+  first mount), `procd` runs, the console works, `ath10k` finds the
+  QCA988x (`hw2.0`), `iw phy` shows both bands. A second x86 reboot
+  came back into OpenWrt by itself through GRUB's default entry. The NPU
+  came back on OpenWrt from eMMC (`Image` restored).
+- Wi-Fi AP generated but left **disabled** and unencrypted by design.
+- Not done: `resize2fs` (not in the image), root password, a network
+  path between x86 and switch (needs a USB Ethernet dongle).
+
 ---
 
 ## Open items
@@ -438,8 +481,8 @@ hung x86, and WAN input is firewalled. After a power cycle:
 - [ ] Forwarding between two LAN ports (hardware-offloaded in the switch).
 - [ ] SFP "F1" (needs a module), port LEDs (PCA9555 mapping).
 - [ ] TCP retransmits OpenWrt→host (flow control is off on the ports).
-- [ ] The x86: SFOS hangs without its NPU. Replace it with a Linux (Wi-Fi
-      ath10k) or leave it.
+- [x] The x86: replaced SFOS by OpenWrt (see §19); still open there:
+      resize2fs, a root password, an uplink for the Wi-Fi (USB dongle).
 - [ ] Upstream: DTS + mv88e6xxx PTP patch to Linux, device to OpenWrt.
 
 ## Open questions after session 1 (historical)
