@@ -31,8 +31,9 @@ install, never let SFOS boot on the x86: it erases the OpenWrt root.
 - **USB**: the front port is the x86's (a USB drive is detected and readable); the NPU's own xHCI controllers are enabled but nothing is wired to them that we found. Speed and hot-plug not measured.
 - **Port LEDs**: wired in the device tree, polarity and colours are guesses.
 - **SFP cage**: untested (no module).
-- **Wi-Fi**: the access point is off until you set an SSID and key; throughput
-  not measured.
+- **Wi-Fi**: the access point is off until you set an SSID and key. Measured on one client
+  (5 GHz, 5 streams, no external antennas fitted): 300–500 Mbit/s down, 200–400 up; other
+  clients, 2.4 GHz and range are untested.
 - **Routing performance** and LAN-to-LAN forwarding: not measured.
 - **Resetting the NPU reboots the x86** (it comes back and re-links by itself).
 - **`./install.sh --serial`** has not been run end to end on hardware.

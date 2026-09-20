@@ -65,7 +65,7 @@ trigger there, or `active-low` in the DTS
 |---|---|
 | PC ↔ NPU through a front port | 941 Mbit/s line rate |
 | NPU ↔ x86 internal link | 630 Mbit/s (NPU→x86), 1.7 Gbit/s (x86→NPU) |
-| Wi-Fi | not measured (one 5 GHz radio, ath10k) |
+| Wi-Fi (5 GHz, channel 36, 80 MHz, iperf3 with 5 parallel streams, **no external antennas fitted**) | 300–500 Mbit/s download, 200–400 Mbit/s upload |
 
 Forwarding between two LAN ports and routed throughput with a wired host on
 the WAN side have not been measured. TCP from the NPU itself to a gigabit
