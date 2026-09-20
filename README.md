@@ -2,7 +2,7 @@
 
 OpenWrt on both computers inside the Sophos XGS 87/107 desktop firewall: the
 Marvell CN9130 network processor runs the router (all 8 gigabit ports, SFP,
-USB, LuCI), the AMD x86 runs the Wi-Fi access point. A virtual Ethernet over
+LuCI), the AMD x86 runs the Wi-Fi access point and the USB port. A virtual Ethernet over
 PCIe joins them. No Sophos code is used.
 
 ## Install
@@ -28,7 +28,7 @@ install, never let SFOS boot on the x86: it erases the OpenWrt root.
 
 ## Not working or untested
 
-- **USB**: controllers enumerate; never tried with a device.
+- **USB**: the front port is the x86's (a USB drive is detected and readable); the NPU's own xHCI controllers are enabled but nothing is wired to them that we found. Speed and hot-plug not measured.
 - **Port LEDs**: wired in the device tree, polarity and colours are guesses.
 - **SFP cage**: untested (no module).
 - **Wi-Fi**: the access point is off until you set an SSID and key; throughput

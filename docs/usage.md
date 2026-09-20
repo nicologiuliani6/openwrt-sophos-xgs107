@@ -12,9 +12,9 @@
 Web interfaces (LuCI), user `root`, **no password until you set one**
 (System → Administration):
 
-- <http://192.168.1.1> – the router: interfaces, firewall, DHCP, USB, LEDs.
+- <http://192.168.1.1> – the router: interfaces, firewall, DHCP, LEDs.
   *Network → Wi-Fi / x86 module* links to the x86's wireless page.
-- <http://192.168.1.2> – the x86: **Wi-Fi**, and its own status. SSH is on
+- <http://192.168.1.2> – the x86: **Wi-Fi**, **USB**, and its own status. SSH is on
   both. Under *Network → Wireless* the radio (`radio0`, QCA988x, 5 GHz,
   channel 36, VHT80, no country set) is present; its interface is disabled.
 
@@ -41,11 +41,14 @@ uci commit wireless && wifi reload
 
 ## USB
 
-The USB port belongs to the NPU (two xHCI controllers are enabled, VBUS on).
-Storage, serial adapters and Ethernet dongles use the usual OpenWrt
-packages (`kmod-usb-storage`, `block-mount` are preinstalled); mount points
-are set in *System → Mount Points* on `192.168.1.1`. **Status: the
-controllers enumerate; not yet tried with a device.**
+The front USB port belongs to the **x86** (USB 2.0 high speed). Storage,
+serial adapters and Ethernet dongles use the usual OpenWrt packages
+(`kmod-usb-storage`, `block-mount`, `kmod-fs-ext4`/`vfat`/`exfat` are in the x86
+image); mount points are set in *System → Mount Points* on
+<http://192.168.1.2>. A USB flash drive is detected and readable; write
+speed and hot-plug are not measured. The NPU's two xHCI controllers are
+enabled with VBUS on, but nothing is connected to them on this board as far as
+we found.
 
 ## LEDs
 

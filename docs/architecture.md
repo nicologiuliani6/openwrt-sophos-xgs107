@@ -10,7 +10,7 @@ project's job is to make both run OpenWrt and behave as one router.
  │ 64 GB SATA flash       │  x2 Gen3   │ 4× Cortex-A72, 2 GB      │  mvpp2 eth0  │ switch     │── port 9 = SFP "F1"
  │ Wi-Fi QCA988x (ath10k) │  (NPU is   │ 7.3 GB eMMC, 4 MB SPI    │  ↔ port 0    │ (mv88e6xxx)│
  │ OpenWrt x86/64         │  the       │ OpenWrt mvebu/cortexa72  │              └────────────┘
- │ ntb0 = 192.168.1.2     │  endpoint) │ router: 192.168.1.1, USB │
+ │ ntb0 = 192.168.1.2     │  endpoint) │ router: 192.168.1.1     │
  └────────────────────────┘            └──────────────────────────┘
    console: 38400 8N1                    console: 115200 8N1 = x86 UART 0x3e8
 ```
@@ -20,7 +20,7 @@ project's job is to make both run OpenWrt and behave as one router.
 | | NPU (CN9130) | x86 |
 |---|---|---|
 | OS | OpenWrt `mvebu/cortexa72`, kernel 6.18, from eMMC slot p1 | OpenWrt `x86/64`, kernel 6.18, from the internal disk |
-| Role | **The router**: DSA over the 88E6193X (ports p1..p8, sfp), NAT, DHCP, firewall, LuCI, USB | **The Wi-Fi access point** and a second LuCI; bridged to the NPU's LAN |
+| Role | **The router**: DSA over the 88E6193X (ports p1..p8, sfp), NAT, DHCP, firewall, LuCI | **The Wi-Fi access point**, the **front USB port** and a second LuCI; bridged to the NPU's LAN |
 | Address | `192.168.1.1` (LAN), DHCP on panel port 2 (WAN) | `192.168.1.2` |
 | Boot | stock U-Boot (SPI) → `/boot/Image` on eMMC p1, fallback to the stock Sophos slot p3 | stock UEFI → GRUB on disk partition 1 → `/openwrt/vmlinuz`, root on partition 3 |
 
