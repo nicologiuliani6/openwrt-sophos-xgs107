@@ -1,7 +1,7 @@
-From 713cc32b1302e643dc0c4b8ea83aa6efa268ca30 Mon Sep 17 00:00:00 2001
+From 5a59140047011a3da65b72ee67a15b2d011af02e Mon Sep 17 00:00:00 2001
 From: Nicolo Giuliani <nicolo.giuliani6@studio.unibo.it>
 Date: Sat, 19 Sep 2026 09:22:53 +0200
-Subject: [PATCH 2/3] dt-bindings: arm: marvell: Add Sophos XGS 107w NPU
+Subject: [PATCH v2 2/3] dt-bindings: arm: marvell: Add Sophos XGS 107w NPU
 
 The Sophos XGS 87/107 desktop firewalls combine an AMD x86 host with a
 separate network processing unit (NPU). The NPU is a Marvell Armada CN9130
@@ -14,16 +14,16 @@ compatibles as fallbacks.
 Assisted-by: LLM
 Signed-off-by: Nicolo Giuliani <nicolo.giuliani6@studio.unibo.it>
 ---
- .../devicetree/bindings/arm/marvell/armada-7k-8k.yaml    | 9 +++++++++
- 1 file changed, 9 insertions(+)
+ .../devicetree/bindings/arm/marvell/armada-7k-8k.yaml      | 7 +++++++
+ 1 file changed, 7 insertions(+)
 
 diff --git a/Documentation/devicetree/bindings/arm/marvell/armada-7k-8k.yaml b/Documentation/devicetree/bindings/arm/marvell/armada-7k-8k.yaml
-index 7e77310da6..2e114139f1 100644
+index 7e77310da6..130128c462 100644
 --- a/Documentation/devicetree/bindings/arm/marvell/armada-7k-8k.yaml
 +++ b/Documentation/devicetree/bindings/arm/marvell/armada-7k-8k.yaml
-@@ -136,4 +136,13 @@ properties:
-           - const: solidrun,cn9132-sr-cex7
-           - const: marvell,cn9130
+@@ -118,6 +118,13 @@ properties:
+           - const: marvell,armada-ap807-quad
+           - const: marvell,armada-ap807
  
 +      - description:
 +          Sophos XGS 87/107 network processing unit (Armada CN9130 SoC
@@ -31,10 +31,10 @@ index 7e77310da6..2e114139f1 100644
 +        items:
 +          - const: sophos,xgs107w-npu
 +          - const: marvell,cn9130
-+          - const: marvell,armada-ap807-quad
-+          - const: marvell,armada-ap807
 +
- additionalProperties: true
+       - description:
+           SolidRun CN9130 SoM based single-board computers
+         items:
 -- 
 2.48.1
 
