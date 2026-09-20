@@ -10,16 +10,16 @@ PCIe.
 
 This series adds the Sophos vendor prefix, the compatible string of the
 NPU board and a device tree that describes the NPU as a standalone system:
-UART console, eMMC, SPI NOR flash, the PCA9555 GPIO expander of the port
-LEDs, the SFP cage and the switch with its ports. The LEDs, the USB ports
+UART console, eMMC, SPI NOR flash, the SFP cage and the switch with its
+ports. The port LEDs, the USB ports
 and the PCIe link to the x86 host (the CN9130 acts as a PCIe endpoint
 towards it, which needs endpoint support that is not part of this series)
 are not described.
 
 Tested on an XGS 107w with Linux 6.18: boot from eMMC, eMMC and SPI NOR
 access, the mvpp2 link to the switch at 10 Gb/s, the 88E6193X probing with
-its eight user ports, and 936 Mbit/s through a front port. The SFP cage
-and the PCA9555 outputs are untested.
+its eight user ports, and 936 Mbit/s through a front port. The SFP cage is
+untested.
 
 dt_binding_check passes for vendor-prefixes.yaml and armada-7k-8k.yaml,
 and CHECK_DTBS=y on marvell/cn9130-sophos-xgs107w.dtb reports no warning

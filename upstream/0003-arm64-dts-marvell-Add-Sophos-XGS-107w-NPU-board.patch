@@ -1,4 +1,4 @@
-From 5f356a9edfc458eb8584f9ebd6ccd26d7ea6befe Mon Sep 17 00:00:00 2001
+From 2229e6563a3ffffaf91249687656f960bd96959d Mon Sep 17 00:00:00 2001
 From: Nicolo Giuliani <nicolo.giuliani6@studio.unibo.it>
 Date: Sat, 19 Sep 2026 09:23:35 +0200
 Subject: [PATCH 3/3] arm64: dts: marvell: Add Sophos XGS 107w NPU board
@@ -15,24 +15,23 @@ are the RJ45 ports, which use the internal PHYs of the switch, and
 port 9 is the SFP cage, connected over 1000BASE-X.
 
 Describe the UART console, the eMMC, the SPI NOR flash that holds the boot
-loader and its environment (read-only), the PCA9555 GPIO expander that
-drives the port LEDs, the SFP cage and the switch with its ports. The LEDs
-themselves, the PCIe link to the x86 host and the USB ports are not
-described.
+loader and its environment (read-only), the SFP cage and the switch with
+its ports. The port LEDs, the PCIe link to the x86 host and the USB ports
+are not described.
 
 The switch is reset through CP GPIO2 pin 17.
 
 Tested on an XGS 107w with Linux 6.18: boot from eMMC, eMMC and SPI NOR
 access, the mvpp2 link to the switch at 10 Gb/s, the 88E6193X probing with
-its eight user ports, and 936 Mbit/s through a front port. The SFP cage
-and the PCA9555 outputs are untested.
+its eight user ports, and 936 Mbit/s through a front port. The SFP cage is
+untested.
 
 Assisted-by: LLM
 Signed-off-by: Nicolo Giuliani <nicolo.giuliani6@studio.unibo.it>
 ---
  arch/arm64/boot/dts/marvell/Makefile          |   1 +
- .../dts/marvell/cn9130-sophos-xgs107w.dts     | 203 ++++++++++++++++++
- 2 files changed, 204 insertions(+)
+ .../dts/marvell/cn9130-sophos-xgs107w.dts     | 189 ++++++++++++++++++
+ 2 files changed, 190 insertions(+)
  create mode 100644 arch/arm64/boot/dts/marvell/cn9130-sophos-xgs107w.dts
 
 diff --git a/arch/arm64/boot/dts/marvell/Makefile b/arch/arm64/boot/dts/marvell/Makefile
@@ -48,10 +47,10 @@ index 09d1544041..81f892715b 100644
  subdir-y	+= mmp
 diff --git a/arch/arm64/boot/dts/marvell/cn9130-sophos-xgs107w.dts b/arch/arm64/boot/dts/marvell/cn9130-sophos-xgs107w.dts
 new file mode 100644
-index 0000000000..f542dad84b
+index 0000000000..821b2eadaa
 --- /dev/null
 +++ b/arch/arm64/boot/dts/marvell/cn9130-sophos-xgs107w.dts
-@@ -0,0 +1,203 @@
+@@ -0,0 +1,189 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
 + * Device tree for the network processing unit (NPU) of the Sophos XGS 87/107
@@ -76,7 +75,6 @@ index 0000000000..f542dad84b
 +
 +	aliases {
 +		ethernet0 = &cp0_eth0;
-+		i2c0 = &cp0_i2c0;
 +		i2c1 = &cp0_i2c1;
 +	};
 +
@@ -126,21 +124,8 @@ index 0000000000..f542dad84b
 +	};
 +};
 +
-+&cp0_i2c0 {
-+	clock-frequency = <100000>;
-+	status = "okay";
-+
-+	/* Drives the port speed LEDs, which are not described yet */
-+	gpio@20 {
-+		compatible = "nxp,pca9555";
-+		reg = <0x20>;
-+		gpio-controller;
-+		#gpio-cells = <2>;
-+	};
-+};
-+
 +&cp0_i2c1 {
-+	/* SFP EEPROM (0x50/0x51) */
++	/* I2C bus of the SFP cage */
 +	clock-frequency = <100000>;
 +	status = "okay";
 +};
