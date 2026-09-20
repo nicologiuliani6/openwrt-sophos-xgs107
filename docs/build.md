@@ -52,7 +52,7 @@ and `git format-patch <pinned-commit>..`.
 
 | Patch | Target | Why |
 |---|---|---|
-| `950-net-dsa-mv88e6xxx-continue-without-PTP-clock` | NPU | the 88E6193X fails to probe because its PTP (TAI) clock reads 0 |
+| `950-net-dsa-mv88e6xxx-6191x-6193x-no-ptp` | NPU | the 88E6193X has no PTP unit but the driver assumed one, so it fails to probe (TAI period reads 0) |
 | `951-PCI-dwc-plat-ep-1M-BAR-align` | NPU | endpoint BARs are 1 MiB granular: without alignment the host reads and writes the wrong memory |
 | `952-ntb-netdev-name-ntbN` | both | a stable `ntb0` name |
 | `953-ntb-hw-epf-prefer-msi` | x86 | the endpoint raises MSI, the DesignWare core always advertises MSI-X |

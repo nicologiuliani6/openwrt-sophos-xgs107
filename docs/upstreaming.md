@@ -8,7 +8,7 @@ The board is not in mainline Linux or OpenWrt yet. The Linux patches are in
 | `0001` | `dt-bindings: vendor-prefixes: Add Sophos` | Marvell mvebu (`mvebu/dt`) |
 | `0002` | `dt-bindings: arm: marvell: Add Sophos XGS 107w NPU` | same |
 | `0003` | `arm64: dts: marvell: Add Sophos XGS 107w NPU board` | same |
-| `0004` | `net: dsa: mv88e6xxx`: continue without PTP if the TAI period is invalid | `net` (a fix, with a `Fixes:` tag) |
+| `0004` | `net: dsa: mv88e6xxx`: 88E6191X and 88E6193X have no PTP (v2, replaces the v1 that skipped PTP) | `net` (a fix, with a `Fixes:` tag) |
 
 `0001`–`0003` are one series with the cover letter `0000-cover-letter.txt`;
 `0004` is sent on its own.
@@ -25,7 +25,7 @@ The switch's reset line (CP GPIO2 pin 17) is described with `reset-gpios`.
 `dt_binding_check` (clean), `CHECK_DTBS=y` on the board's DTB (only warnings
 shared with other CN913x boards), `checkpatch.pl --strict --codespell`
 (clean; one inherent MAINTAINERS notice on the DTS), the driver builds with
-`W=1` with PTP on and off. The trimmed DTS boots the reference unit: eMMC,
+`W=1`; the 88E6193X probes with the netdev patch in place of the PTP workaround, with no PTP clock registered. The trimmed DTS boots the reference unit: eMMC,
 the 88E6193X with eight ports and the SFP node, 10 Gb/s to the switch,
 936 Mbit/s through a port. The SFP cage and LEDs are untested.
 
