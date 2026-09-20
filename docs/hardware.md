@@ -11,7 +11,7 @@ OpenWrt. Board silkscreen `XGS 87(W) 107(W) 1.40`
 | Ports | 8× GbE RJ45 labelled 1/LAN, 2/WAN, 3/DMZ, 4, 5, 6, 7, 8, and one SFP labelled F1 |
 | USB | 1× USB 3.0 type A. The CN9130 has two xHCI controllers with VBUS switches, the x86 only exposes internal hubs, so the front port is most likely the NPU's (to be confirmed with a device) |
 | Console (x86) | RJ45 (Cisco rollover) **and** micro-USB (Prolific PL2303, `067b:23a3`), 38400 8N1; the micro-USB one takes priority. The PL2303 is renumbered `ttyUSBn` at every power cycle: use `/dev/serial/by-id/usb-Prolific*-port0` |
-| Console (NPU) | wired to the x86's `/dev/ttyS2`, 115200 8N1. The on-board 2×4 `NPU COM` header is unused (it showed no output) |
+| Console (NPU) | wired to the x86's second UART (I/O `0x3e8`, irq 5): `/dev/ttyS2` under SFOS, `/dev/ttyS1` under OpenWrt; 115200 8N1. The on-board 2×4 `NPU COM` header is unused (it showed no output) |
 | Wi-Fi | M.2/mini-PCIe QCA988x (`168c:003c`, ath10k), two U.FL leads to the SMA connectors |
 | Power | two DC inputs (redundant) |
 

@@ -5,7 +5,7 @@
 | What | How |
 |---|---|
 | x86 | micro-USB (PL2303) or RJ45 console, 38400 8N1. Use the `by-id` path: `ttyUSBn` changes at every power cycle |
-| NPU | from the x86: `stty -F /dev/ttyS2 115200 raw -echo; cat /dev/ttyS2` (or `picocom -b 115200 /dev/ttyS2`). Works from OpenWrt on the x86 and from SFOS |
+| NPU | from the x86: `stty -F /dev/ttyS1 115200 raw -echo; cat /dev/ttyS1` or `picocom -b 115200 /dev/ttyS1` (`ttyS2` under SFOS; both packages are in the x86 image) |
 | Both, from the PC | `tools/console-send.py` (send lines, print the reply), `tools/console-log.py` (log across power cycles) |
 
 The NPU's U-Boot waits 3 seconds (`bootdelay`): press a key on the NPU

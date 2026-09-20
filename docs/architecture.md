@@ -12,7 +12,7 @@ project's job is to make both run OpenWrt and behave as one router.
  │ OpenWrt x86/64         │  the       │ OpenWrt mvebu/cortexa72  │              └────────────┘
  │ ntb0 = 192.168.1.2     │  endpoint) │ router: 192.168.1.1, USB │
  └────────────────────────┘            └──────────────────────────┘
-   console: 38400 8N1                    console: 115200 8N1 = x86 /dev/ttyS2
+   console: 38400 8N1                    console: 115200 8N1 = x86 UART 0x3e8
 ```
 
 ## What runs where
