@@ -9,6 +9,9 @@
 | x86 module | `192.168.1.2`, on the same LAN through the internal link (`ntb0`); default gateway and DNS are the NPU |
 | Wi-Fi clients | bridged into the same LAN, addresses from the NPU's DHCP |
 
+The appliance is **two separate computers**, so there are **two web interfaces**, each
+with its own password, and no combined one.
+
 Web interfaces (LuCI), user `root`, **no password until you set one**
 (System → Administration):
 

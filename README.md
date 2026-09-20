@@ -5,6 +5,20 @@ Marvell CN9130 network processor runs the router (all 8 gigabit ports, SFP,
 LuCI), the AMD x86 runs the Wi-Fi access point and the USB port. A virtual Ethernet over
 PCIe joins them. No Sophos code is used.
 
+## Two systems, two web interfaces
+
+The appliance contains two separate computers, so it has two independent
+OpenWrt systems, each with its own web interface and its own password:
+
+| | Address | Manages |
+|---|---|---|
+| **NPU** (Marvell CN9130) | <http://192.168.1.1> | the router: 8 ports, SFP, WAN/LAN, firewall, DHCP, LEDs |
+| **x86** (AMD) | <http://192.168.1.2> | Wi-Fi, the front USB port, its own status |
+
+They are connected by an internal virtual Ethernet and share one LAN, but
+there is no single combined interface: the NPU's menu only links to the x86's
+([docs/architecture.md](docs/architecture.md)).
+
 ## Install
 
 You need the appliance, a PC on the same network, and the x86 console
