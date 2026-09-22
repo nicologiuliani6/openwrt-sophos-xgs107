@@ -1,0 +1,1 @@
+[ "$ACTION" = ifup ] && [ "$INTERFACE" = lan ] && /etc/init.d/vrrp-iface start

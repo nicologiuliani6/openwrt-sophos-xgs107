@@ -1,0 +1,51 @@
+#!/bin/sh /etc/rc.common
+# Creates the macvlan interface FRR's vrrpd needs to see VRID 1 (v4) and
+# grants zebra/vrrpd the Linux capabilities they need. Both are necessary
+# and not provided by the frr package's own /etc/init.d/frr:
+#
+# - vrrpd does not create the macvlan device itself; it only looks for one
+#   with the virtual MAC address ("no interface found w/ MAC ...").
+# - zebra/vrrpd run as the unprivileged "network" user with no capabilities,
+#   so they cannot create/bring up network interfaces without them.
+#
+# The capability set is declared once in /etc/capabilities/{zebra,vrrpd}.json
+# (the same schema procd itself uses for procd-managed services) and applied
+# here with setcap, because frr's own init script does not run these daemons
+# under procd, so procd's own capabilities= mechanism does not apply to them.
+#
+# Must start before frr (START=95).
+
+START=94
+
+VRID=1
+PARENT=br-lan
+MAC='00:00:5e:00:01:01'
+IFNAME="vrrp${VRID}-v4-1"
+
+apply_caps() {
+	# $1 = daemon name (matches /usr/sbin/$1 and /etc/capabilities/$1.json)
+	local bin="/usr/sbin/$1" json="/etc/capabilities/$1.json" caps
+	[ -x "$bin" ] && [ -f "$json" ] || return 0
+	caps=$(jq -r '.effective | join(",")' "$json" 2>/dev/null)
+	[ -n "$caps" ] && setcap "${caps}+eip" "$bin" 2>/dev/null
+}
+
+start() {
+	apply_caps zebra
+	apply_caps vrrpd
+	ip link show "$IFNAME" >/dev/null 2>&1 ||
+		ip link add link "$PARENT" name "$IFNAME" address "$MAC" type macvlan mode bridge
+	ip link set "$IFNAME" up
+	# Without this, traffic forwarded through the macvlan device during a
+	# failover is rejected by the "lan" firewall zone: it only knows about
+	# the "lan" network (br-lan), not this macvlan child of it. Found with
+	# nft monitor trace during a real MikroTik-down test.
+	case " $(uci -q get firewall.@zone[0].device) " in
+	*" $IFNAME "*) ;;
+	*) uci add_list firewall.@zone[0].device="$IFNAME"; uci commit firewall; fw4 reload 2>/dev/null ;;
+	esac
+}
+
+stop() {
+	ip link del "$IFNAME" 2>/dev/null
+}
