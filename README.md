@@ -1,5 +1,13 @@
 # OpenWrt for the Sophos XGS 107w
 
+**Project page:** [nicologiuliani.site/docs/sophos-xgs107w](https://nicologiuliani.site/docs/sophos-xgs107w/) — what it is, quick start, FAQ.
+
+**How it was built:** [the write-up](https://nicologiuliani.site/blog/sophos-xgs107w-openwrt/)
+
+**Questions, or testing on your own unit?** [Open an issue](https://github.com/nicologiuliani6/openwrt-sophos-xgs107/issues)
+or [a discussion](https://github.com/nicologiuliani6/openwrt-sophos-xgs107/discussions), or email
+[nicolo.giuliani6@studio.unibo.it](mailto:nicolo.giuliani6@studio.unibo.it).
+
 OpenWrt on both computers inside the Sophos XGS 87/107 desktop firewall: the
 Marvell CN9130 network processor runs the router (all 8 gigabit ports, SFP,
 LuCI), the AMD x86 runs the Wi-Fi access point and the USB port. A virtual Ethernet over
