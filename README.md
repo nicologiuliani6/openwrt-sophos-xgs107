@@ -8,6 +8,8 @@
 or [a discussion](https://github.com/nicologiuliani6/openwrt-sophos-xgs107/discussions), or email
 [nicolo.giuliani6@studio.unibo.it](mailto:nicolo.giuliani6@studio.unibo.it).
 
+**Sponsor:** [github.com/sponsors/nicologiuliani6](https://github.com/sponsors/nicologiuliani6)
+
 OpenWrt on both computers inside the Sophos XGS 87/107 desktop firewall: the
 Marvell CN9130 network processor runs the router (all 8 gigabit ports, SFP,
 LuCI), the AMD x86 runs the Wi-Fi access point and the USB port. A virtual Ethernet over
