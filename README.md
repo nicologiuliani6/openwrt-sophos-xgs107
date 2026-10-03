@@ -6,7 +6,7 @@
 
 **Questions, or testing on your own unit?** [Open an issue](https://github.com/nicologiuliani6/openwrt-sophos-xgs107/issues)
 or [a discussion](https://github.com/nicologiuliani6/openwrt-sophos-xgs107/discussions), or email
-[nicolo.giuliani6@studio.unibo.it](mailto:nicolo.giuliani6@studio.unibo.it).
+[me@nicologiuliani.site](mailto:me@nicologiuliani.site).
 
 **Sponsor:** [github.com/sponsors/nicologiuliani6](https://github.com/sponsors/nicologiuliani6)
 
