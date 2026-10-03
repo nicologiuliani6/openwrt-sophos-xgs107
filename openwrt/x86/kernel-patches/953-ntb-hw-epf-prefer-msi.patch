@@ -1,4 +1,4 @@
-From: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
+From: Nicolo Giuliani <me@nicologiuliani.site>
 Subject: [PATCH] ntb: ntb_hw_epf: prefer MSI over MSI-X
 
 ---

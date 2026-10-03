@@ -1,4 +1,4 @@
-From: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
+From: Nicolo Giuliani <me@nicologiuliani.site>
 Subject: [PATCH] net: ntb_netdev: name the interface ntbN
 
 A board with both an Ethernet MAC and NTB gets an "ethN" whose number

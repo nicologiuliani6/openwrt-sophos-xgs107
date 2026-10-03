@@ -1,4 +1,4 @@
-From: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
+From: Nicolo Giuliani <me@nicologiuliani.site>
 Subject: [PATCH] PCI: endpoint: pci-epf-vntb: poll the host commands and doorbells every 1 ms
 
 The host has no way to interrupt the endpoint here, so doorbells are found by

@@ -1,5 +1,5 @@
 From 33c54370acb25bad32783397eeb705e8f2042fe2 Mon Sep 17 00:00:00 2001
-From: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
+From: Nicolo Giuliani <me@nicologiuliani.site>
 Date: Sat, 19 Sep 2026 20:13:04 +0200
 Subject: [PATCH 2/3] mvebu: teach the cortexa72 target about the Sophos XGS
  107w NPU

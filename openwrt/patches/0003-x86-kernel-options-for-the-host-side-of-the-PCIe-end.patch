@@ -1,5 +1,5 @@
 From cf90d73ea602019cda3b1503af9fe1dff5b46a28 Mon Sep 17 00:00:00 2001
-From: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
+From: Nicolo Giuliani <me@nicologiuliani.site>
 Date: Sat, 19 Sep 2026 20:13:05 +0200
 Subject: [PATCH 3/3] x86: kernel options for the host side of the PCIe
  endpoint NTB link

@@ -1,4 +1,4 @@
-From: Nicolo Giuliani <nicologiuliani6@studio.unibo.it>
+From: Nicolo Giuliani <me@nicologiuliani.site>
 Subject: [PATCH] PCI: dwc: plat: endpoint mode on Armada 8K / CN913x
 
 - advertise 1M BAR alignment: the BAR match iATU on this core ignores the
