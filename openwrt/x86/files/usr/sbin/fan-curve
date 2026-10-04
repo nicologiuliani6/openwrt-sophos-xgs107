@@ -1,0 +1,23 @@
+#!/bin/sh
+# Quiet fan curve for the x86 module (nct6779, pwm1 = chassis fan, DC mode).
+# Below T_LOW the fan sits at PWM_MIN (~2000 rpm, near silent; below ~50 it
+# stalls, so never go lower). Linear ramp to 255 at T_HIGH.
+# ponytail: tuned on a bench unit, adjust PWM_MIN/T_LOW/T_HIGH per chassis.
+PWM_MIN=55 T_LOW=55 T_HIGH=80
+
+H=$(grep -l nct67 /sys/class/hwmon/hwmon*/name | head -1); H=${H%/name}
+K=$(grep -l k10temp /sys/class/hwmon/hwmon*/name | head -1); K=${K%/name}
+[ -n "$H" ] && [ -n "$K" ] || exit 1
+
+echo 1 > $H/pwm1_enable
+trap 'echo 5 > $H/pwm1_enable; exit' TERM INT   # hand back to the chip's Smart Fan
+
+while :; do
+	t=$(( $(cat $K/temp1_input) / 1000 ))
+	if   [ $t -le $T_LOW ];  then p=$PWM_MIN
+	elif [ $t -ge $T_HIGH ]; then p=255
+	else p=$(( PWM_MIN + (255 - PWM_MIN) * (t - T_LOW) / (T_HIGH - T_LOW) ))
+	fi
+	echo $p > $H/pwm1
+	sleep 5
+done
