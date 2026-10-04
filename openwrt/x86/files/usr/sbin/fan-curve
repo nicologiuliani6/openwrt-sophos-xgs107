@@ -1,19 +1,45 @@
 #!/bin/sh
-# Quiet fan curve for the x86 module (nct6779, pwm1 = chassis fan, DC mode).
-# Below T_LOW the fan sits at PWM_MIN (~2000 rpm, near silent; below ~50 it
-# stalls, so never go lower). Linear ramp to 255 at T_HIGH.
-# ponytail: tuned on a bench unit, adjust PWM_MIN/T_LOW/T_HIGH per chassis.
-PWM_MIN=55 T_LOW=55 T_HIGH=80
+# Quiet fan curve for the x86 module (nct6779 pwm1 = the chassis fan, DC mode).
+# The fan also cools the NPU, so the curve follows the hotter of the two.
+# Below T_LOW it sits at PWM_MIN (~2000 rpm, near silent; below ~50 it stalls,
+# so never go lower); linear ramp to 255 at T_HIGH.
+# ponytail: tuned on a bench unit, override in /etc/fan-curve.conf.
+PWM_MIN=55 T_LOW=55 T_HIGH=80 NPU=192.168.1.1
+NPU_OFFSET=15   # the NPU idles at ~60C, ~15C hotter than the x86 for the same airflow
+[ -f /etc/fan-curve.conf ] && . /etc/fan-curve.conf
 
 H=$(grep -l nct67 /sys/class/hwmon/hwmon*/name | head -1); H=${H%/name}
 K=$(grep -l k10temp /sys/class/hwmon/hwmon*/name | head -1); K=${K%/name}
 [ -n "$H" ] && [ -n "$K" ] || exit 1
 
+KEY=/root/.ssh/id_dropbear
+Q='cat /sys/class/thermal/thermal_zone*/temp | sort -n | tail -1'
+SSH="ssh -y -o BatchMode=yes -i $KEY root@$NPU"
+
+# NPU temperature: read-only key, forced command on the NPU side. The key is
+# created on first run and pushed to the NPU if it still accepts a login
+# without a key (stock image: no root password); otherwise the NPU is ignored.
+npu_temp() {
+	[ -f $KEY ] || { mkdir -p /root/.ssh; dropbearkey -t ed25519 -f $KEY >/dev/null 2>&1; }
+	v=$($SSH "$Q" 2>/dev/null)
+	if [ -z "$v" ]; then
+		pub=$(dropbearkey -y -f $KEY | grep ^ssh-)
+		ssh -y -o BatchMode=yes root@$NPU "grep -qF '$pub' /etc/dropbear/authorized_keys 2>/dev/null || echo 'command=\"$Q\",no-pty,no-port-forwarding,no-agent-forwarding $pub' >> /etc/dropbear/authorized_keys" >/dev/null 2>&1
+		v=$($SSH "$Q" 2>/dev/null)
+	fi
+	case $v in *[!0-9]*|"") v=0;; esac   # no/garbled answer: ignore the NPU
+	echo $(( v / 1000 - NPU_OFFSET ))
+}
+
 echo 1 > $H/pwm1_enable
 trap 'echo 5 > $H/pwm1_enable; exit' TERM INT   # hand back to the chip's Smart Fan
 
+n=0 tn=0
 while :; do
 	t=$(( $(cat $K/temp1_input) / 1000 ))
+	[ $((n % 6)) -eq 0 ] && tn=$(npu_temp)   # NPU every ~30 s
+	n=$((n + 1))
+	[ $tn -gt $t ] && t=$tn
 	if   [ $t -le $T_LOW ];  then p=$PWM_MIN
 	elif [ $t -ge $T_HIGH ]; then p=255
 	else p=$(( PWM_MIN + (255 - PWM_MIN) * (t - T_LOW) / (T_HIGH - T_LOW) ))

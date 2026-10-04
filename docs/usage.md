@@ -62,6 +62,34 @@ from the stock tables; if the LEDs look inverted or dark, change the
 trigger there, or `active-low` in the DTS
 (`openwrt/npu/dts/cn9130-sophos-xgs107w.dts`) and rebuild.
 
+## Fan
+
+The only fan is wired to the x86 module's Super I/O chip (nct6779, `pwm1`), and it
+cools the NPU too. The stock curve runs it at ~3300 rpm even when idle; the image
+replaces it with `/usr/sbin/fan-curve` (procd service `fan-curve`, enabled at first boot):
+
+| Hotter of (x86 CPU, NPU − 15 °C) | Fan |
+|---|---|
+| up to 55 °C | pwm 55, ~2000 rpm, near silent |
+| 55 → 80 °C | linear ramp |
+| 80 °C and above | pwm 255, ~7700 rpm |
+
+- Never lower than pwm 55: below ~50 the fan stalls (measured 0 rpm at 45).
+- The NPU idles at ~60 °C (trip 100 °C), hence the 15 °C offset. Its temperature is
+  read over ssh every ~30 s with a key the x86 creates on first run
+  (`/root/.ssh/id_dropbear`). The key is pushed to the NPU only while the NPU still
+  accepts a root login without a key (stock image, no root password), and the
+  NPU-side entry is a forced read-only command (`command="cat …thermal_zone*/temp…"`).
+  If the NPU cannot be read, the curve silently follows the x86 CPU only. **Set a root
+  password on the NPU** (System → Administration): the blank-password login is open
+  to the whole LAN.
+- Tuning: `/etc/fan-curve.conf` on the x86 (`PWM_MIN`, `T_LOW`, `T_HIGH`, `NPU`,
+  `NPU_OFFSET`). `NPU` defaults to `192.168.1.1`.
+- `/etc/init.d/fan-curve stop` hands the fan back to the chip's own Smart Fan curve.
+
+Power: nothing else needed. The NPU uses `ondemand` (400 MHz – 1.6 GHz), the x86
+`schedutil` (1.2 – 1.6 GHz); both already idle low.
+
 ## Performance (measured)
 
 | | |
