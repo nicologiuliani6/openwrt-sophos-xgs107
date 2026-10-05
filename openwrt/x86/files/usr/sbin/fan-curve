@@ -14,7 +14,7 @@ K=$(grep -l k10temp /sys/class/hwmon/hwmon*/name | head -1); K=${K%/name}
 
 KEY=/root/.ssh/id_dropbear
 Q='cat /sys/class/thermal/thermal_zone*/temp | sort -n | tail -1'
-SSH="ssh -y -o BatchMode=yes -i $KEY root@$NPU"
+SSH="timeout 8 ssh -y -o BatchMode=yes -i $KEY root@$NPU"
 
 # NPU temperature: read-only key, forced command on the NPU side. The key is
 # created on first run and pushed to the NPU if it still accepts a login
@@ -24,26 +24,26 @@ npu_temp() {
 	v=$($SSH "$Q" 2>/dev/null)
 	if [ -z "$v" ]; then
 		pub=$(dropbearkey -y -f $KEY | grep ^ssh-)
-		ssh -y -o BatchMode=yes root@$NPU "grep -qF '$pub' /etc/dropbear/authorized_keys 2>/dev/null || echo 'command=\"$Q\",no-pty,no-port-forwarding,no-agent-forwarding $pub' >> /etc/dropbear/authorized_keys" >/dev/null 2>&1
+		timeout 8 ssh -y -o BatchMode=yes root@$NPU "grep -qF '$pub' /etc/dropbear/authorized_keys 2>/dev/null || echo 'command=\"$Q\",no-pty,no-port-forwarding,no-agent-forwarding $pub' >> /etc/dropbear/authorized_keys" >/dev/null 2>&1
 		v=$($SSH "$Q" 2>/dev/null)
 	fi
 	case $v in *[!0-9]*|"") v=0;; esac   # no/garbled answer: ignore the NPU
 	echo $(( v / 1000 - NPU_OFFSET ))
 }
 
-echo 1 > $H/pwm1_enable
 trap 'echo 5 > $H/pwm1_enable; exit' TERM INT   # hand back to the chip's Smart Fan
 
 n=0 tn=0
 while :; do
 	t=$(( $(cat $K/temp1_input) / 1000 ))
-	[ $((n % 6)) -eq 0 ] && tn=$(npu_temp)   # NPU every ~30 s
-	n=$((n + 1))
 	[ $tn -gt $t ] && t=$tn
 	if   [ $t -le $T_LOW ];  then p=$PWM_MIN
 	elif [ $t -ge $T_HIGH ]; then p=255
 	else p=$(( PWM_MIN + (255 - PWM_MIN) * (t - T_LOW) / (T_HIGH - T_LOW) ))
 	fi
+	echo 1 > $H/pwm1_enable   # every pass: the chip can fall back to auto/full speed (e.g. late at boot)
 	echo $p > $H/pwm1
+	[ $((n % 6)) -eq 0 ] && tn=$(npu_temp)   # NPU every ~30 s, after the write: ssh can be slow
+	n=$((n + 1))
 	sleep 5
 done
