@@ -41,7 +41,7 @@ while :; do
 	elif [ $t -ge $T_HIGH ]; then p=255
 	else p=$(( PWM_MIN + (255 - PWM_MIN) * (t - T_LOW) / (T_HIGH - T_LOW) ))
 	fi
-	echo 1 > $H/pwm1_enable   # every pass: the chip can fall back to auto/full speed (e.g. late at boot)
+	echo 1 > $H/pwm1_enable   # every pass, in case the chip drops back to auto (note: it reports 0 at pwm 255)
 	echo $p > $H/pwm1
 	[ $((n % 6)) -eq 0 ] && tn=$(npu_temp)   # NPU every ~30 s, after the write: ssh can be slow
 	n=$((n + 1))
