@@ -1,17 +1,19 @@
 # Upstream submission
 
-The board is not in mainline Linux or OpenWrt yet. The Linux patches are in
-`upstream/`:
+The board is not in a released mainline Linux kernel or in OpenWrt yet. The
+Linux patches are in `upstream/`:
 
-| Patch | What | Tree |
-|---|---|---|
-| `0001` | `dt-bindings: vendor-prefixes: Add Sophos` | Marvell mvebu (`mvebu/dt`) |
-| `0002` | `dt-bindings: arm: marvell: Add Sophos XGS 107w NPU` | same |
-| `0003` | `arm64: dts: marvell: Add Sophos XGS 107w NPU board` | same |
-| `0004` | `net: dsa: mv88e6xxx`: 88E6191X and 88E6193X have no PTP (v2, replaces the v1 that skipped PTP) | `net` (a fix, with a `Fixes:` tag) |
+| Patch | What | Tree | Status |
+|---|---|---|---|
+| `0001` | `dt-bindings: vendor-prefixes: Add Sophos` | Marvell mvebu (`mvebu/dt64`) | applied on 2026-10-01 |
+| `0002` | `dt-bindings: arm: marvell: Add Sophos XGS 107w NPU` | same | applied on 2026-10-01 |
+| `0003` | `arm64: dts: marvell: Add Sophos XGS 107w NPU board` | same | applied on 2026-10-01 |
+| `0004` | `net: dsa: mv88e6xxx`: 88E6191X and 88E6193X have no PTP (v2, replaces the v1 that skipped PTP) | `net` (a fix, with a `Fixes:` tag) | merged into `net.git` (commit `6b491af01aa5`), backported to stable |
 
 `0001`–`0003` are one series with the cover letter `0000-cover-letter.txt`;
-`0004` is sent on its own.
+`0004` is sent on its own. The device tree series is expected to reach
+mainline in the next merge window. The OpenWrt side of the board support
+(`openwrt/`) has not been submitted to OpenWrt.
 
 The DTS in `0003` describes the NPU as a standalone system (UART, eMMC, SPI
 NOR, GPIO expander, SFP, the switch with eight DSA ports). The PCIe endpoint,

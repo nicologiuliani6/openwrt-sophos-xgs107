@@ -91,7 +91,7 @@ under the owner's standing permission.
 | Unmodified upstream code: Linux mainline drivers (`mv88e6xxx`, `mvpp2`, DesignWare endpoint, `pci-epf-vntb`, `ntb_*`, `ath10k`), OpenWrt, LuCI, stock U-Boot | widely used and tested by others |
 | Written by the AI and run on the one reference unit, not in production: the device tree, kernel patches 950–954, NPU/x86 link scripts, `install-x86.sh` and `install-npu.sh` (earlier versions of them ran; the current rewrite was not re-run), `x86-mbr.py`, console tools | works on that unit, never in the field |
 | Written by the AI, never run on hardware: `install.sh`, `backup-stock.sh`, `--serial` mode, the from-scratch `build/build.sh` pipeline (being verified), USB and LED configuration | untested |
-| Upstream patches (`upstream/`) | compiled and schema-checked; the DTS boots on the unit; not yet reviewed by maintainers |
+| Upstream patches (`upstream/`) | compiled and schema-checked; the DTS boots on the unit; reviewed by the maintainers: the `mv88e6xxx` fix is merged into `net.git` and backported to stable, the device tree series is applied to the mvebu tree ([docs/upstreaming.md](docs/upstreaming.md)) |
 
 Expect bugs. Do not use it for anything you cannot re-flash.
 
@@ -102,3 +102,7 @@ over a multi-day session plus several helper agents. Token count and cost were
 not recorded by the tool: the session processed on the order of tens of
 millions of tokens, mostly cached context re-reads (an estimate, not a
 measurement). Exact figures: the owner's Claude usage page.
+
+## License
+
+GPL-2.0, see [LICENSE](LICENSE).
